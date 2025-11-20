@@ -18,6 +18,7 @@ Page {
 
         ListView {
             id: schoolList
+            spacing: 50
             Layout.fillWidth: true
             Layout.fillHeight: true
             model: ListModel {
@@ -27,6 +28,13 @@ Page {
             delegate: ItemDelegate {
                 text: model.name
                 width: parent.width
+                Rectangle {
+                    color: "green"
+                    border.color: "black"
+                    border.width: 3
+                    anchors.fill: parent
+                }
+
                 onClicked: {
                     showPageRequested(2)
                     console.log("Нажата школа");
