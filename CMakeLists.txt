@@ -17,7 +17,6 @@ qt_add_qml_module(apptimesheet
     VERSION 1.0
     QML_FILES
         qml/Main.qml
-        qml/components/Empty.qml
         qml/components/SchoolList.qml
     SOURCES
         src/empty.cpp
