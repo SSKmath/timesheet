@@ -13,6 +13,10 @@ int main(int argc, char *argv[])
         []() { QCoreApplication::exit(-1); },
         Qt::QueuedConnection);
     engine.loadFromModule("timesheet", "Main");
+    if (engine.rootObjects().isEmpty()) {
+        qDebug() << "Failed to load QML!";
+        return -1;
+    }
 
     return app.exec();
 }

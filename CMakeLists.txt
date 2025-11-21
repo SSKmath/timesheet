@@ -14,11 +14,14 @@ qt_add_executable(apptimesheet
 
 qt_add_qml_module(apptimesheet
     URI timesheet
+    VERSION 1.0
     QML_FILES
-    QML_FILES qml/Main.qml
-    QML_FILES qml/components/Empty.qml
-    SOURCES src/empty.cpp
-
+        qml/Main.qml
+        qml/components/SchoolList.qml
+    SOURCES
+        src/empty.cpp
+        QML_FILES qml/components/AddSchool.qml
+        QML_FILES qml/components/SchoolDetails.qml
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
