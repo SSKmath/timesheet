@@ -18,10 +18,11 @@ qt_add_qml_module(apptimesheet
     QML_FILES
         qml/Main.qml
         qml/components/SchoolList.qml
+        qml/components/AddSchool.qml
+        qml/components/SchoolDetails.qml
     SOURCES
-        src/empty.cpp
-        QML_FILES qml/components/AddSchool.qml
-        QML_FILES qml/components/SchoolDetails.qml
+        src/models/room.h src/models/room.cpp
+        src/models/roommodel.h src/models/roommodel.cpp
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
