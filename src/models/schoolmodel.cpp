@@ -5,12 +5,12 @@ SchoolModel::SchoolModel(QObject *parent) : QAbstractListModel(parent)
     m_storage = new SchoolStorage(this);
     QList<QVariantMap> all = m_storage->loadAllSchools();
     beginResetModel();
-    for (const QVariantMap &m : all)
+    for (const QVariantMap &m : std::as_const(all))
     {
         School *s = new School(m.value("name").toString(), this);
         QVariantList rooms = m.value("rooms").toList();
         RoomModel *rm = qobject_cast<RoomModel*>(s->roomsModel());
-        for (const QVariant &rv : rooms)
+        for (const QVariant &rv : std::as_const(rooms))
         {
             QVariantMap r = rv.toMap();
             rm->appendRoom(r.value("name").toString(), r.value("size").toString());
