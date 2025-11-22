@@ -5,6 +5,7 @@
 #include <QVariantMap>
 #include <QList>
 #include "school.h"
+#include "../storage/schoolstorage.h"
 
 class SchoolModel : public QAbstractListModel
 {
@@ -29,6 +30,7 @@ public:
 
 private:
     QList<School*> m_schools;
+    SchoolStorage *m_storage;
 };
 
 #endif // SCHOOLMODEL_H

@@ -1,6 +1,24 @@
 #include "schoolmodel.h"
 
-SchoolModel::SchoolModel(QObject *parent) : QAbstractListModel(parent) {}
+SchoolModel::SchoolModel(QObject *parent) : QAbstractListModel(parent)
+{
+    m_storage = new SchoolStorage(this);
+    QList<QVariantMap> all = m_storage->loadAllSchools();
+    beginResetModel();
+    for (const QVariantMap &m : all)
+    {
+        School *s = new School(m.value("name").toString(), this);
+        QVariantList rooms = m.value("rooms").toList();
+        RoomModel *rm = qobject_cast<RoomModel*>(s->roomsModel());
+        for (const QVariant &rv : rooms)
+        {
+            QVariantMap r = rv.toMap();
+            rm->appendRoom(r.value("name").toString(), r.value("size").toString());
+        }
+        m_schools.append(s);
+    }
+    endResetModel();
+}
 
 int SchoolModel::rowCount(const QModelIndex &parent) const
 {
@@ -52,7 +70,13 @@ void SchoolModel::addSchoolFromVariant(const QString &name, const QVariantList &
     }
     m_schools.append(s);
     endInsertRows();
-    //TODO запись в файл
+
+    if (m_storage)
+    {
+        bool ok = m_storage->saveSchool(s);
+        if (!ok)
+            qWarning() << "Не удалось сохранить школу в файл";
+    }
 }
 
 void SchoolModel::removeSchool(int index)
