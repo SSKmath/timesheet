@@ -60,7 +60,7 @@ bool SchoolStorage::saveSchool(const QVariantMap &schoolData)
 
     QJsonArray roomsArr;
     QVariantList rooms = schoolData.value("rooms").toList();
-    for (const QVariant &rv : rooms)
+    for (const QVariant &rv : std::as_const(rooms))
     {
         QVariantMap rmap = rv.toMap();
         QJsonObject ro;
@@ -119,7 +119,7 @@ QVariantMap SchoolStorage::loadSchool(const QString &id) const
     ans["name"] = o.value("name").toString();
     QVariantList rooms;
     QJsonArray ra = o.value("rooms").toArray();
-    for (const QJsonValue &v : ra)
+    for (const QJsonValue &v : std::as_const(ra))
     {
         QJsonObject ro = v.toObject();
         QVariantMap rm;
@@ -136,7 +136,7 @@ QList<QVariantMap> SchoolStorage::loadAllSchools() const
     QList<QVariantMap> ans;
     QDir dir(m_dir);
     QStringList files = dir.entryList(QStringList() << "*.json", QDir::Files, QDir::Name);
-    for (const QString &fname : files)
+    for (const QString &fname : std::as_const(files))
     {
         QString path = dir.filePath(fname);
         QFile f(path);
