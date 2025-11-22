@@ -21,10 +21,7 @@ Page {
             spacing: 50
             Layout.fillWidth: true
             Layout.fillHeight: true
-            model: ListModel {
-                ListElement { name: "Школа 1" }
-                ListElement { name: "Школа 2" }
-            }
+            model: schoolModel
             delegate: ItemDelegate {
                 text: model.name
                 width: parent.width

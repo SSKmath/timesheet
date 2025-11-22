@@ -24,8 +24,6 @@ Page {
 
     ListModel {
         id: roomsModel
-        ListElement { name: "Кабинет 101"; size: "Маленький" }
-        ListElement { name: "Кабинет 102"; size: "Большой" }
     }
 
     ColumnLayout {
@@ -125,8 +123,27 @@ Page {
                 text: "Сохранить"
                 Layout.fillWidth: true
                 onClicked: {
-                    console.log("Сохраняем школу")
+                    var name = schoolNameField.text.trim()
+                    if (name.length === 0) {
+                        console.log("Имя школы пустое, сохранение отменено")
+                        return
+                    }
+
+                    var arr = []
+                    for (var i = 0; i < roomsModel.count; ++i) {
+                        var cur = roomsModel.get(i)
+                        if (!cur.name || cur.name.trim().length === 0)
+                            continue
+                        arr.push({"name": cur.name, "size": cur.size ? cur.size : "Маленький"})
+                    }
+
+                    schoolModel.addSchoolFromVariant(name, arr)
+
+                    schoolNameField.text = ""
+                    roomsModel.clear()
                     showPageRequested(0)
+
+                    console.log("Школа успешно сохранена")
                 }
             }
 
@@ -134,8 +151,10 @@ Page {
                 text: "Отмена"
                 Layout.fillWidth: true
                 onClicked: {
-                    console.log("Отмена добавления школы")
+                    schoolNameField.text = ""
+                    roomsMode.clear()
                     showPageRequested(0)
+                    console.log("Отмена добавления школы")
                 }
             }
         }
@@ -144,7 +163,7 @@ Page {
     function addRoom() {
         var name = newRoomName.text.trim()
         if (name.length === 0) {
-            console.log("Имя кабинета пустое — пропускаем")
+            console.log("Имя кабинета пустое - пропускаем")
             return
         }
         roomsModel.append({ "name": name, "size": newRoomSize.currentText })
