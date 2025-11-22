@@ -17,6 +17,7 @@ ApplicationWindow {
         visible: currentPage === 0
         anchors.fill: parent
         onShowPageRequested: (pageIndex) => showPage(pageIndex)
+        onSchoolSelected: (schoolId) => schoolDetails.schoolId = schoolId
     }
 
     AddSchool {

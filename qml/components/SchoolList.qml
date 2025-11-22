@@ -5,6 +5,7 @@ import QtQuick.Layouts
 Page {
     id: schoolListPage
     signal showPageRequested(int pageIndex)
+    signal schoolSelected(string schoolId)
 
     ColumnLayout {
         anchors.fill: parent
@@ -28,6 +29,7 @@ Page {
                 width: parent.width
 
                 onClicked: {
+                    schoolSelected(index)
                     showPageRequested(2)
                     console.log("Нажата школа");
                 }

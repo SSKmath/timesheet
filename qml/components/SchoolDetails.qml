@@ -6,6 +6,43 @@ Page {
     id: schoolDtailsPage
     signal showPageRequested(int pageIndex)
 
+    property int schoolId: -1
+    property string schoolName: ""
+
+    onSchoolIdChanged: {
+        loadSchoolData()
+    }
+
+    function loadSchoolData() {
+        if (schoolId >= 0) {
+            var schoolData = schoolModel.get(schoolId)
+            if (schoolData) {
+                schoolName = schoolData.name
+                roomsModel.clear()
+                var rooms = schoolData.rooms
+                for (var i = 0; i < rooms.length; i++) {
+                    roomsModel.append({
+                        "name": rooms[i].name,
+                        "size": rooms[i].size
+                    })
+                }
+                console.log("Загружена школа:", schoolName, "с", rooms.length, "кабинетами")
+            }
+        }
+    }
+
+    function addRoom() {
+        var name = newRoomName.text.trim()
+        if (name.length === 0) {
+            console.log("Имя кабинета пустое - пропускаем")
+            return
+        }
+        roomsModel.append({ "name": name, "size": newRoomSize.currentText })
+        console.log("Добавлен кабинет:", name, newRoomSize.currentText)
+        newRoomName.text = ""
+        newRoomName.forceActiveFocus()
+    }
+
     header: ToolBar {
         ToolButton {
             text: "Назад"
@@ -29,8 +66,8 @@ Page {
 
     RowLayout {
         spacing: 50
+
         ColumnLayout {
-            //anchors.fill: parent
             anchors.margins: 16
             spacing: 12
 
@@ -46,11 +83,7 @@ Page {
                 ListView {
                     id: roomsListView
                     width: parent.width
-                    //model: roomsModel
-                    model: ListModel {
-                       ListElement { name: "Кабинет 1"; size: "Большой" }
-                       ListElement { name: "Кабинет 2"; size: "Маленький" }
-                    }
+                    model: roomsModel
                     delegate: Rectangle {
                         width: roomsListView.width
                         height: 48
@@ -66,7 +99,7 @@ Page {
                                 placeholderText: "Название кабинета"
                                 Layout.fillWidth: true
                                 onEditingFinished: {
-                                    //roomsModel.set(index, {"name": text, "size": roomsModel.get(index).size})
+                                    roomsModel.setProperty(index, "name", text)
                                     console.log("Изменено имя:", text)
                                 }
                             }
@@ -76,15 +109,15 @@ Page {
                                 model: ["Маленький", "Большой"]
                                 currentIndex: size === "Большой" ? 1 : 0
                                 onCurrentTextChanged: {
-                                    //roomsModel.set(index, {"name": roomsModel.get(index).name, "size": currentText})
-                                    //console.log("Изменён размер для", roomsModel.get(index).name, "->", currentText)
+                                    roomsModel.setProperty(index, "size", currentText)
+                                    console.log("Изменён размер для", name, "->", currentText)
                                 }
                             }
 
                             Button {
                                 text: "Удалить"
                                 onClicked: {
-                                    console.log("Удаляем кабинет:", roomsModel.get(index).name)
+                                    console.log("Удаляем кабинет:", name)
                                     roomsModel.remove(index)
                                 }
                             }
@@ -114,49 +147,6 @@ Page {
                 Button {
                     text: "Добавить"
                     onClicked: addRoom()
-                }
-            }
-
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 8
-                Button {
-                    text: "Сохранить"
-                    Layout.fillWidth: true
-                    onClicked: {
-                        var name = schoolNameField.text.trim()
-                        if (name.length === 0) {
-                            console.log("Имя школы пустое, сохранение отменено")
-                            return
-                        }
-
-                        var arr = []
-                        for (var i = 0; i < roomsModel.count; ++i) {
-                            var cur = roomsModel.get(i)
-                            if (!cur.name || cur.name.trim().length === 0)
-                                continue
-                            arr.push({"name": cur.name, "size": cur.size ? cur.size : "Маленький"})
-                        }
-
-                        schoolModel.addSchoolFromVariant(name, arr)
-
-                        schoolNameField.text = ""
-                        roomsModel.clear()
-                        showPageRequested(0)
-
-                        console.log("Школа успешно сохранена")
-                    }
-                }
-
-                Button {
-                    text: "Отмена"
-                    Layout.fillWidth: true
-                    onClicked: {
-                        schoolNameField.text = ""
-                        roomsMode.clear()
-                        showPageRequested(0)
-                        console.log("Отмена добавления школы")
-                    }
                 }
             }
         }
@@ -227,27 +217,4 @@ Page {
 
         }
     }
-
-    /*ColumnLayout {
-        anchors.fill: parent
-        anchors.margins: 20
-
-        Label {
-            text: "Детали школы"
-            font.bold: true
-        }
-
-        RowLayout {
-            Label { text: "Количество классов:" }
-            SpinBox { value: 10 }
-        }
-
-        Label { text: "Расписание" }
-        ListView {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            model: ["Понедельник: Математика", "Вторник: Информатика"]
-            delegate: Label { text: modelData }
-        }
-    }*/
 }
