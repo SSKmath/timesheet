@@ -1,0 +1,18 @@
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
+
+Page {
+    id: teacherDetailsPage
+    signal showPageRequested(int pageIndex)
+
+    header: ToolBar {
+        ToolButton {
+            text: "Назад"
+            onClicked: {
+                showPageRequested(2)
+                console.log("Нажата кнопка назад")
+            }
+        }
+    }
+}

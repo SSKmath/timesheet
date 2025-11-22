@@ -18,19 +18,14 @@ Page {
 
         ListView {
             id: schoolList
-            spacing: 50
+            spacing: 0
             Layout.fillWidth: true
             Layout.fillHeight: true
             model: schoolModel
             delegate: ItemDelegate {
                 text: model.name
+                font.pointSize: 18
                 width: parent.width
-                Rectangle {
-                    color: "green"
-                    border.color: "black"
-                    border.width: 3
-                    anchors.fill: parent
-                }
 
                 onClicked: {
                     showPageRequested(2)
@@ -40,6 +35,7 @@ Page {
 
             Label {
                 anchors.centerIn: parent
+                font.pointSize: 18
                 text: "У вас нет школ"
                 visible: schoolList.count === 0
             }

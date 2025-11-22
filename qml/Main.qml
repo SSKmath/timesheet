@@ -33,6 +33,20 @@ ApplicationWindow {
         onShowPageRequested: (pageIndex) => showPage(pageIndex)
     }
 
+    TeacherDetails {
+        id: teacherDetails
+        visible: currentPage === 3
+        anchors.fill: parent
+        onShowPageRequested: (pageIndex) => showPage(pageIndex)
+    }
+
+    GroupDetails {
+        id: groupDetails
+        visible: currentPage === 4
+        anchors.fill: parent
+        onShowPageRequested: (pageIndex) => showPage(pageIndex)
+    }
+
     function showPage(pageIndex) {
         currentPage = pageIndex
     }
