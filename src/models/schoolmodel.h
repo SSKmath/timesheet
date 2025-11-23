@@ -27,6 +27,7 @@ public:
     Q_INVOKABLE void removeSchool(int index);
     Q_INVOKABLE QVariantMap get(int index) const;
     Q_INVOKABLE int count() const;
+    Q_INVOKABLE QObject *roomsModelAt(int index) const;
 
 private:
     QList<School*> m_schools;

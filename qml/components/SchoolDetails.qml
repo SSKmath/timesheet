@@ -8,39 +8,18 @@ Page {
 
     property int schoolId: -1
     property string schoolName: ""
+    property var roomModel: null
 
     onSchoolIdChanged: {
-        loadSchoolData()
-    }
-
-    function loadSchoolData() {
         if (schoolId >= 0) {
             var schoolData = schoolModel.get(schoolId)
             if (schoolData) {
                 schoolName = schoolData.name
-                roomsModel.clear()
-                var rooms = schoolData.rooms
-                for (var i = 0; i < rooms.length; i++) {
-                    roomsModel.append({
-                        "name": rooms[i].name,
-                        "size": rooms[i].size
-                    })
-                }
-                console.log("Загружена школа:", schoolName, "с", rooms.length, "кабинетами")
+                roomModel = schoolModel.roomsModelAt(schoolId)
+                console.log(roomModel) // undefined
+                console.log("Загружена школа:", schoolName, "с комнатами из C++ модели")
             }
         }
-    }
-
-    function addRoom() {
-        var name = newRoomName.text.trim()
-        if (name.length === 0) {
-            console.log("Имя кабинета пустое - пропускаем")
-            return
-        }
-        roomsModel.append({ "name": name, "size": newRoomSize.currentText })
-        console.log("Добавлен кабинет:", name, newRoomSize.currentText)
-        newRoomName.text = ""
-        newRoomName.forceActiveFocus()
     }
 
     header: ToolBar {
@@ -53,22 +32,22 @@ Page {
         }
 
         Label {
-            text: "Имя школы"
+            text: schoolName
             font.pointSize: 16
             font.bold: true
             anchors.centerIn: parent
         }
     }
 
-    ListModel {
-        id: roomsModel
-    }
-
     RowLayout {
-        spacing: 50
+        anchors.fill: parent
+        spacing: 10
 
         ColumnLayout {
-            anchors.margins: 16
+            Layout.fillWidth: true
+            Layout.preferredWidth: 1
+            Layout.fillHeight: true
+            //anchors.margins: 16
             spacing: 12
 
             Label {
@@ -83,7 +62,7 @@ Page {
                 ListView {
                     id: roomsListView
                     width: parent.width
-                    model: roomsModel
+                    model: roomModel
                     delegate: Rectangle {
                         width: roomsListView.width
                         height: 48
@@ -99,7 +78,8 @@ Page {
                                 placeholderText: "Название кабинета"
                                 Layout.fillWidth: true
                                 onEditingFinished: {
-                                    roomsModel.setProperty(index, "name", text)
+                                    var ind = roomsListView.model.index(index, 0)
+                                    roomsListView.model.setData(ind, text, 1)
                                     console.log("Изменено имя:", text)
                                 }
                             }
@@ -109,7 +89,8 @@ Page {
                                 model: ["Маленький", "Большой"]
                                 currentIndex: size === "Большой" ? 1 : 0
                                 onCurrentTextChanged: {
-                                    roomsModel.setProperty(index, "size", currentText)
+                                    var idx = roomsListView.model.index(index, 0)
+                                    roomsListView.model.setData(idx, currentText, 2)
                                     console.log("Изменён размер для", name, "->", currentText)
                                 }
                             }
@@ -117,8 +98,8 @@ Page {
                             Button {
                                 text: "Удалить"
                                 onClicked: {
+                                    roomModel.removeAt(index)
                                     console.log("Удаляем кабинет:", name)
-                                    roomsModel.remove(index)
                                 }
                             }
                         }
@@ -146,12 +127,26 @@ Page {
 
                 Button {
                     text: "Добавить"
-                    onClicked: addRoom()
+                    onClicked: {
+                        var name = newRoomName.text.trim()
+                        if (name.length === 0) {
+                            console.log("Имя кабинета пустое - пропускаем")
+                            return
+                        }
+                        roomModel.appendRoom(name, newRoomSize.currentText)
+                        newRoomName.text = ""
+                        newRoomName.forceActiveFocus()
+                        console.log("Добавлен кабинет:", name, newRoomSize.currentText)
+                    }
                 }
             }
         }
 
         ColumnLayout {
+            Layout.fillWidth: true
+            Layout.preferredWidth: 1
+            Layout.fillHeight: true
+
             Label {
                 text: "Учителя"
                 font.bold: true
@@ -185,6 +180,10 @@ Page {
         }
 
         ColumnLayout {
+            Layout.fillWidth: true
+            Layout.preferredWidth: 1
+            Layout.fillHeight: true
+
             Label {
                 text: "Классы"
                 font.bold: true

@@ -12,7 +12,7 @@ class School : public QObject
     Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
     Q_PROPERTY(QObject* roomsModel READ roomsModel CONSTANT)
 public:
-    explicit School(const QString &name, QObject *parent = nullptr);
+    explicit School(const QString &id, const QString &name, QObject *parent = nullptr);
 
     QString id() const;
     QString name() const;
@@ -22,6 +22,10 @@ public:
 
 signals:
     void nameChanged();
+    void requestSave();
+
+private slots:
+    void saveToStorage();
 
 private:
     QString m_id;
