@@ -48,10 +48,7 @@ Page {
         }
 
         Item{
-            Label {
-                text: "Классы в которых преподает учитель"
-                font.bold: true
-            }
+
         }
 
         Item{
@@ -70,7 +67,7 @@ Page {
             RowLayout{
 
                 Label{
-                text: "8:"
+                    text: "Классное руководство"
                 }
 
                 TextField {
@@ -97,11 +94,11 @@ Page {
             RowLayout{
 
                 Label{
-                text: "8:"
+                    text: "Личный кабинет"
                 }
 
                 TextField {
-                    placeholderText: "Классы"
+                    placeholderText: "Название кабинета"
                     Layout.fillWidth: true
                 }
             }
@@ -118,19 +115,57 @@ Page {
         }
 
         Item{
+            ListModel{
+                id: weekDays
+                ListElement{day: "Понедельник"}
+                ListElement{day: "Вторник"}
+                ListElement{day: "Среда"}
+                ListElement{day: "Четверг"}
+                ListElement{day: "Пятница"}
+                ListElement{day: "Суббота"}
+            }
+
             Layout.fillWidth: true
             Layout.fillHeight: true
-            RowLayout{
+            Column {
+                spacing: 5
 
-                Label{
-                text: "8:"
-                }
+                Repeater {
+                    model: weekDays
 
-                TextField {
-                    placeholderText: "Классы"
-                    Layout.fillWidth: true
+                    Row{
+                        spacing: 10
+                        Rectangle {
+                            id: checkBox
+                            width: 15
+                            height: 15
+                            border.color: "gray"
+                            color: checked ? "lightgreen" : "white"
+
+                            property bool checked: false
+
+                            // Галочка (видна только когда checked = true)
+                            Text {
+                                text: "✓"
+                                font.pixelSize: 15
+                                color: "green"
+                                anchors.centerIn: parent
+                                visible: parent.checked
+                            }
+
+                            // Обработчик кликов
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: checkBox.checked = !checkBox.checked
+                            }
+                        }
+                        Label {
+                            text: day
+                        }
+                    }
                 }
             }
+
         }
         Item{
             Layout.fillWidth: true
@@ -146,6 +181,7 @@ Page {
 
 
     }
+
 
 
 }
