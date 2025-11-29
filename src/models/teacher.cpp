@@ -1,8 +1,8 @@
 #include "teacher.h"
 
-Teacher::Teacher(QObject *parent) : QObject(parent) {}
+Teacher::Teacher(QObject *parent) : QObject(parent), m_workingDays(6, false) {}
 
-Teacher::Teacher(const QString &surname, const QString &name, const QString &patronymic, const QString &subject, QObject *parent) : QObject(parent), m_surname(surname), m_name(name), m_patronymic(patronymic), m_subject(subject) {}
+Teacher::Teacher(const QString &surname, const QString &name, const QString &patronymic, const QString &subject, QObject *parent) : QObject(parent), m_surname(surname), m_name(name), m_patronymic(patronymic), m_subject(subject), m_workingDays(6, false) {}
 
 QString Teacher::surname() const
 {
@@ -54,6 +54,43 @@ void Teacher::setSubject(const QString &v)
         return;
     m_subject = v;
     emit subjectChanged();
+}
+
+QList<bool> Teacher::workingDays() const
+{
+    return m_workingDays;
+}
+
+void Teacher::setWorkingDays(const QList<bool> &days)
+{
+    if (days.size() != 6)
+        return;
+
+    if (m_workingDays == days)
+        return;
+
+    m_workingDays = days;
+    emit workingDaysChanged();
+}
+
+bool Teacher::worksOnDay(int index) const
+{
+    if (index < 0 || index >= m_workingDays.size())
+        return false;
+
+    return m_workingDays[index];
+}
+
+void Teacher::setWorksOnDay(int index, bool v)
+{
+    if (index < 0 || index >= m_workingDays.size())
+        return;
+
+    if (m_workingDays[index] == v)
+        return;
+
+    m_workingDays[index] = v;
+    emit workingDaysChanged();
 }
 
 
