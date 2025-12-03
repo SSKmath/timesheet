@@ -30,6 +30,7 @@ qt_add_qml_module(apptimesheet
         SOURCES src/models/schoolmodel.h src/models/schoolmodel.cpp
         SOURCES src/storage/schoolstorage.h src/storage/schoolstorage.cpp
         SOURCES src/models/teacher.h src/models/teacher.cpp
+        SOURCES src/models/teachermodel.h src/models/teachermodel.cpp
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
