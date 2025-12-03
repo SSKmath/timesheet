@@ -34,11 +34,11 @@ QVariant TeacherModel::data(const QModelIndex &index, int role) const
 QHash<int, QByteArray> TeacherModel::roleNames() const
 {
     QHash<int, QByteArray> roles;
-    roles[SurnameRole]    = "surname";
-    roles[NameRole]       = "name";
-    roles[PatronymicRole] = "patronymic";
-    roles[SubjectRole]    = "subject";
-    roles[WorkingDaysRole]= "workingDays";
+    roles[SurnameRole]     = "surname";
+    roles[NameRole]        = "name";
+    roles[PatronymicRole]  = "patronymic";
+    roles[SubjectRole]     = "subject";
+    roles[WorkingDaysRole] = "workingDays";
     return roles;
 }
 
@@ -48,8 +48,8 @@ void TeacherModel::appendTeacher(const QString &surname,
                                  const QString &subject,
                                  const QList<bool> &workingDays)
 {
-    if (surname.isEmpty() || name.isEmpty() ||
-        patronymic.isEmpty() || subject.isEmpty())
+    if (surname.isEmpty() || name.isEmpty() || patronymic.isEmpty() ||
+        subject.isEmpty() || workingDays.size() != 6)
         return;
 
     const int ind = m_teachers.count();
@@ -77,4 +77,3 @@ int TeacherModel::count() const
 {
     return m_teachers.count();
 }
-
