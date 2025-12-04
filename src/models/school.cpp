@@ -3,6 +3,7 @@
 School::School(const QString &name, QObject *parent) : QObject(parent), m_id(QUuid::createUuid().toString()), m_name(name)
 {
     m_rooms = new RoomModel(this);
+    m_teachers = new TeacherModel(this);
 }
 
 QString School::id() const
@@ -26,4 +27,9 @@ void School::setName(const QString &n)
 QObject* School::roomsModel() const
 {
     return m_rooms;
+}
+
+QObject* School::teachersModel() const
+{
+    return m_teachers;
 }

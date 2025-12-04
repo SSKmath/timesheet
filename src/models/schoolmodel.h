@@ -14,7 +14,8 @@ public:
     enum Roles {
         IdRole = Qt::UserRole + 1,
         NameRole,
-        RoomsModelRole
+        RoomsModelRole,
+        TeachersModelRole
     };
 
     explicit SchoolModel(QObject *parent = nullptr);
@@ -23,7 +24,7 @@ public:
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
     QHash<int, QByteArray> roleNames() const override;
 
-    Q_INVOKABLE void addSchoolFromVariant(const QString &name, const QVariantList &rooms);
+    Q_INVOKABLE void addSchoolFromVariant(const QString &name, const QVariantList &rooms, const QVariantList &teachers);
     Q_INVOKABLE void removeSchool(int index);
     Q_INVOKABLE QVariantMap get(int index) const;
     Q_INVOKABLE int count() const;
