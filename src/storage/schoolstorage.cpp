@@ -70,6 +70,27 @@ bool SchoolStorage::saveSchool(const QVariantMap &schoolData)
     }
     obj["rooms"] = roomsArr;
 
+    QJsonArray teachersArr;
+    QVariantList teachers = schoolData.value("teachers").toList();
+    for (const QVariant &tv : std::as_const(teachers))
+    {
+        QVariantMap tmap = tv.toMap();
+        QJsonObject to;
+        to["surname"]    = tmap.value("surname").toString();
+        to["name"]       = tmap.value("name").toString();
+        to["patronymic"] = tmap.value("patronymic").toString();
+        to["subject"]    = tmap.value("subject").toString();
+
+        QJsonArray daysArr;
+        QVariantList daysList = tmap.value("workingDays").toList();
+        for (const QVariant &dv : std::as_const(daysList))
+            daysArr.append(dv.toBool());
+
+        to["workingDays"] = daysArr;
+        teachersArr.append(to);
+    }
+    obj["teachers"] = teachersArr;
+
     QJsonDocument doc(obj);
     QString path = QDir(m_dir).filePath(id + ".json");
     return writeJsonToFile(path, doc.toJson(QJsonDocument::Indented));
@@ -97,6 +118,25 @@ bool SchoolStorage::saveSchool(School *school)
         }
     }
     m["rooms"] = rooms;
+
+    QVariantList teachers;
+    TeacherModel *tm = qobject_cast<TeacherModel*>(school->teachersModel());
+    if(tm)
+    {
+        for (int i = 0; i < tm->rowCount(); ++i)
+        {
+            QModelIndex ind = tm->index(i);
+            QVariantMap t;
+            t["surname"]     = tm->data(ind, TeacherModel::SurnameRole).toString();
+            t["name"]        = tm->data(ind, TeacherModel::NameRole).toString();
+            t["patronymic"]  = tm->data(ind, TeacherModel::PatronymicRole).toString();
+            t["subject"]     = tm->data(ind, TeacherModel::SubjectRole).toString();
+            t["workingDays"] = tm->data(ind, TeacherModel::WorkingDaysRole);
+            teachers.append(t);
+        }
+    }
+    m["teachers"] = teachers;
+
     return saveSchool(m);
 }
 
@@ -117,6 +157,7 @@ QVariantMap SchoolStorage::loadSchool(const QString &id) const
     QJsonObject o = doc.object();
     ans["id"] = o.value("id").toString();
     ans["name"] = o.value("name").toString();
+
     QVariantList rooms;
     QJsonArray ra = o.value("rooms").toArray();
     for (const QJsonValue &v : std::as_const(ra))
@@ -128,6 +169,27 @@ QVariantMap SchoolStorage::loadSchool(const QString &id) const
         rooms.append(rm);
     }
     ans["rooms"] = rooms;
+
+    QVariantList teachers;
+    QJsonArray ta = o.value("teachers").toArray();
+    for (const QJsonValue &v : std::as_const(ta))
+    {
+        QJsonObject to = v.toObject();
+        QVariantMap tm;
+        tm["surname"]    = to.value("surname").toString();
+        tm["name"]       = to.value("name").toString();
+        tm["patronymic"] = to.value("patronymic").toString();
+        tm["subject"]    = to.value("subject").toString();
+
+        QVariantList days;
+        QJsonArray da = to.value("workingDays").toArray();
+        for (const QJsonValue &dv : std::as_const(da))
+            days.append(dv.toBool());
+        tm["workingDays"] = days;
+        teachers.append(tm);
+    }
+    ans["teachers"] = teachers;
+
     return ans;
 }
 
@@ -150,6 +212,7 @@ QList<QVariantMap> SchoolStorage::loadAllSchools() const
         QVariantMap m;
         m["id"] = o.value("id").toString();
         m["name"] = o.value("name").toString();
+
         QVariantList rooms;
         for (const QJsonValue &rv : o.value("rooms").toArray())
         {
@@ -160,6 +223,27 @@ QList<QVariantMap> SchoolStorage::loadAllSchools() const
             rooms.append(r);
         }
         m["rooms"] = rooms;
+
+        QVariantList teachers;
+        QJsonArray ta = o.value("teachers").toArray();
+        for (const QJsonValue &v : std::as_const(ta))
+        {
+            QJsonObject to = v.toObject();
+            QVariantMap tm;
+            tm["surname"]    = to.value("surname").toString();
+            tm["name"]       = to.value("name").toString();
+            tm["patronymic"] = to.value("patronymic").toString();
+            tm["subject"]    = to.value("subject").toString();
+
+            QVariantList days;
+            QJsonArray da = to.value("workingDays").toArray();
+            for (const QJsonValue &dv : std::as_const(da))
+                days.append(dv.toBool());
+            tm["workingDays"] = days;
+            teachers.append(tm);
+        }
+        m["teachers"] = teachers;
+
         ans.append(m);
     }
     return ans;
