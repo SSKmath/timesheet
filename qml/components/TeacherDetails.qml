@@ -201,7 +201,10 @@ Page {
 
     RowLayout {
         Layout.fillWidth: true
-        y: 500
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.margins: 16
 
         Button {
             id: addButton
