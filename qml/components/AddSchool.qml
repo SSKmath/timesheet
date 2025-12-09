@@ -137,7 +137,7 @@ Page {
                         arr.push({"name": cur.name, "size": cur.size ? cur.size : "Маленький"})
                     }
 
-                    schoolModel.addSchoolFromVariant(name, arr)
+                    schoolModel.addSchoolFromVariant(name, arr, [])
 
                     schoolNameField.text = ""
                     roomsModel.clear()

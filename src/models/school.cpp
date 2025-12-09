@@ -5,7 +5,7 @@ School::School(const QString &id, const QString &name, QObject *parent) : QObjec
     m_rooms = new RoomModel(this);
     QObject::connect(m_rooms, &RoomModel::dataModified, this, &School::saveToStorage);
     m_teachers = new TeacherModel(this);
-    // qObject::connect
+    QObject::connect(m_teachers, &TeacherModel::dataModified, this, &School::saveToStorage);
 }
 
 QString School::id() const

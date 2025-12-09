@@ -10,6 +10,13 @@ ApplicationWindow {
     height: 600
     title: "timesheet"
 
+    QtObject {
+        id: appState
+        property var teacherModel: null
+        property int teacherIndex: -1
+        property bool teacherIsNew: false
+    }
+
     property int currentPage: 0
 
     SchoolList {

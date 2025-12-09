@@ -31,6 +31,48 @@ QVariant TeacherModel::data(const QModelIndex &index, int role) const
     }
 }
 
+bool TeacherModel::setData(const QModelIndex &index, const QVariant &value, int role)
+{
+    if (!index.isValid() || index.row() < 0 || index.row() >= m_teachers.count())
+        return false;
+    Teacher *t = m_teachers.at(index.row());
+    if (!t)
+        return false;
+
+    switch (role) {
+    case 0:
+        t->setSurname(value.toString());
+        break;
+    case 1:
+        t->setName(value.toString());
+        break;
+    case 2:                                        // жёсткие костыли, не понимаю, почему роли не работают
+        t->setPatronymic(value.toString());
+        break;
+    case 4:
+    {
+        if (!value.canConvert<QVariantList>())
+            return false;
+
+        QVariantList list = value.toList();
+        QList<bool> boolList;
+        boolList.reserve(list.size());
+
+        for (const QVariant &v : std::as_const(list))
+            boolList.append(v.toBool());
+
+        t->setWorkingDays(boolList);
+        break;
+    }
+    default:
+        return false;
+    }
+
+    emit dataChanged(index, index, {role});
+    emit dataModified();
+    return true;
+}
+
 QHash<int, QByteArray> TeacherModel::roleNames() const
 {
     QHash<int, QByteArray> roles;
@@ -60,6 +102,7 @@ void TeacherModel::appendTeacher(const QString &surname,
 
     m_teachers.append(t);
     endInsertRows();
+    emit dataModified();
 }
 
 void TeacherModel::removeAt(int index)
@@ -71,9 +114,17 @@ void TeacherModel::removeAt(int index)
     endRemoveRows();
     if (t)
         t->deleteLater();
+    emit dataModified();
 }
 
 int TeacherModel::count() const
 {
     return m_teachers.count();
+}
+
+QObject* TeacherModel::teacherAt(int index) const
+{
+    if (index < 0 || index >= m_teachers.size())
+        return nullptr;
+    return m_teachers.at(index);
 }

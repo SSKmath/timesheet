@@ -6,6 +6,20 @@ Page {
     id: teacherDetailsPage
     signal showPageRequested(int pageIndex)
 
+    readonly property var model: appState.teacherModel
+    readonly property int tIndex: appState.teacherIndex
+    readonly property bool isNew: appState.teacherIsNew
+
+    ListModel {
+        id: weekDays
+        ListElement{day: "Понедельник"; checked: false}
+        ListElement{day: "Вторник"; checked: false}
+        ListElement{day: "Среда"; checked: false}
+        ListElement{day: "Четверг"; checked: false}
+        ListElement{day: "Пятница"; checked: false}
+        ListElement{day: "Суббота"; checked: false}
+    }
+
     header: ToolBar {
         ToolButton {
             text: "Назад"
@@ -15,7 +29,7 @@ Page {
             }
         }
         Label {
-            text: "Информация об учителе"
+            text: isNew ? "Добавить учителя" : "Информация об учителе"
             font.bold: true
             anchors.centerIn: parent
         }
@@ -129,22 +143,13 @@ Page {
         }
 
         Item {
-            ListModel {
-                id: weekDays
-                ListElement{day: "Понедельник"}
-                ListElement{day: "Вторник"}
-                ListElement{day: "Среда"}
-                ListElement{day: "Четверг"}
-                ListElement{day: "Пятница"}
-                ListElement{day: "Суббота"}
-            }
-
             Layout.fillWidth: true
             Layout.fillHeight: true
             Column {
                 spacing: 5
 
                 Repeater {
+                    id: weekRepeater
                     model: weekDays
 
                     Row {
@@ -154,7 +159,7 @@ Page {
                             width: 15
                             height: 15
                             border.color: "gray"
-                            color: checked ? "lightgreen" : "white"
+                            color: model.checked ? "lightgreen" : "white"
 
                             property bool checked: false
 
@@ -163,12 +168,14 @@ Page {
                                 font.pixelSize: 15
                                 color: "green"
                                 anchors.centerIn: parent
-                                visible: parent.checked
+                                visible: model.checked
                             }
 
                             MouseArea {
                                 anchors.fill: parent
-                                onClicked: checkBox.checked = !checkBox.checked
+                                onClicked: {
+                                    weekDays.setProperty(index, "checked", !model.checked)
+                                }
                             }
                         }
                         Label {
@@ -190,10 +197,77 @@ Page {
                 }
             }
         }
-
-
     }
 
+    RowLayout {
+        Layout.fillWidth: true
+        y: 500
 
+        Button {
+            id: addButton
+            visible: appState.teacherIsNew === true
+            text: "Добавить"
+            onClicked: {
+                var data = collectFormData()
+                console.log("Добавление учителя:", JSON.stringify(data))
+                model.appendTeacher(data.surname, data.name, data.patronymic, "subject", data.weekdays)
+                showPageRequested(2)
+            }
+        }
 
+        Button {
+            id: saveButton
+            visible: appState.teacherIsNew === false
+            text: "Сохранить изменения"
+            onClicked: {
+                var data = collectFormData()
+                console.log(data)
+                appState.teacherModel.setData(appState.teacherModel.index(appState.teacherIndex, 0), data.surname, 0)
+                appState.teacherModel.setData(appState.teacherModel.index(appState.teacherIndex, 0), data.name, 1)
+                appState.teacherModel.setData(appState.teacherModel.index(appState.teacherIndex, 0), data.patronymic, 2) // жёсткие костыли,
+                appState.teacherModel.setData(appState.teacherModel.index(appState.teacherIndex, 0), "subject", 3)       // я не понимаю, почему
+                appState.teacherModel.setData(appState.teacherModel.index(appState.teacherIndex, 0), data.weekdays, 4)   // роли не работают
+                showPageRequested(2)
+            }
+        }
+    }
+
+    onVisibleChanged: {
+        if (visible) {
+            if (appState.teacherIsNew)
+            {
+                teacherSurName.text = ""
+                teacherName.text = ""
+                teacherPatronymic.text = ""
+                for (var i = 0; i < weekDays.count; ++i) {
+                    weekDays.setProperty(i, "checked", false)
+                }
+            }
+            else
+            {
+                var teacherObj = appState.teacherModel.teacherAt(appState.teacherIndex);
+                console.log(teacherObj.workingDays)
+                teacherSurName.text = teacherObj.surname
+                teacherName.text = teacherObj.name
+                teacherPatronymic.text = teacherObj.patronymic
+                for (var j = 0; j < weekDays.count; ++j) {
+                    weekDays.setProperty(j, "checked", teacherObj.workingDays[j])
+                }
+            }
+        }
+    }
+
+    function collectFormData() {
+        var weekdaysArr = []
+        for (var i = 0; i < weekDays.count; ++i) {
+            weekdaysArr.push(weekDays.get(i).checked)
+        }
+
+        return {
+            surname: teacherSurName.text,
+            name: teacherName.text,
+            patronymic: teacherPatronymic.text,
+            weekdays: weekdaysArr
+        }
+    }
 }

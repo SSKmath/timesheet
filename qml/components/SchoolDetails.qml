@@ -9,14 +9,16 @@ Page {
     property int schoolId: -1
     property string schoolName: ""
     property var roomModel: null
+    property var teacherModel: null
 
     onSchoolIdChanged: {
         if (schoolId >= 0) {
             var schoolData = schoolModel.get(schoolId)
             if (schoolData) {
                 schoolName = schoolData.name
-                roomModel = schoolModel.roomsModelAt(schoolId)
-                console.log(roomModel) // undefined
+                roomModel = schoolModel.roomModelAt(schoolId)
+                teacherModel = schoolModel.teacherModelAt(schoolId)
+                appState.teacherModel = teacherModel
                 console.log("Загружена школа:", schoolName, "с комнатами из C++ модели")
             }
         }
@@ -163,16 +165,11 @@ Page {
                 ListView {
                     id: teachersListView
                     width: parent.width
-                    //model: teachersModel
-                    model: ListModel {
-                       ListElement { name: "ФИО 1" }
-                       ListElement { name: "ФИО 2" }
-                    }
+                    model: teacherModel
                     delegate: Rectangle {
                         width: parent.width
                         height: 48
                         color: "transparent"
-
 
                         RowLayout {
                             anchors.fill: parent
@@ -180,11 +177,13 @@ Page {
                             spacing: 8
 
                             Label {
-                                text: name
+                                text: surname + " " + name.charAt(0) + ". " + patronymic.charAt(0) + "."
 
                                 MouseArea {
                                     anchors.fill: parent
                                     onClicked: {
+                                        appState.teacherIndex = index
+                                        appState.teacherIsNew = false
                                         showPageRequested(3)
                                         console.log("Показать информацию об учителе");
                                     }
@@ -198,7 +197,7 @@ Page {
                             Button {
                                 text: "Удалить"
                                 onClicked: {
-                                    //roomModel.removeAt(index)
+                                    teacherModel.removeAt(index)
                                     console.log("Удаляем учителя:", name)
                                 }
                             }
@@ -216,6 +215,11 @@ Page {
                 Layout.alignment: Qt.AlignHCenter
                 Button {
                     text: "Добавить"
+                    onClicked: {
+                        appState.teacherIndex = -1
+                        appState.teacherIsNew = true
+                        showPageRequested(3)
+                    }
                 }
             }
         }

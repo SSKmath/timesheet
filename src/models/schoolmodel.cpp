@@ -207,10 +207,18 @@ int SchoolModel::count() const
     return m_schools.count();
 }
 
-QObject *SchoolModel::roomsModelAt(int index) const
+QObject *SchoolModel::roomModelAt(int index) const
 {
     if (index < 0 || index >= m_schools.count())
         return nullptr;
     School *s = m_schools.at(index);
     return s ? static_cast<QObject*>(s->roomsModel()) : nullptr;
+}
+
+QObject *SchoolModel::teacherModelAt(int index) const
+{
+    if (index < 0 || index >= m_schools.count())
+        return nullptr;
+    School *s = m_schools.at(index);
+    return s ? static_cast<QObject*>(s->teachersModel()) : nullptr;
 }

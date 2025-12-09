@@ -25,7 +25,7 @@ QVariant RoomModel::data(const QModelIndex &index, int role) const
 bool RoomModel::setData(const QModelIndex &index, const QVariant &value, int role)
 {
     role += Qt::UserRole; //когда-нибудь: понять, почему qml передаёт считая с 1
-    qDebug() << "RoomsModel::setData row=" << index.row() << "value=" << value << "role=" << role << "SizeRole=" << SizeRole;
+    //qDebug() << "RoomsModel::setData row=" << index.row() << "value=" << value << "role=" << role << "SizeRole=" << SizeRole;
 
     if (!index.isValid() || index.row() < 0 || index.row() >= m_rooms.count())
         return false;
