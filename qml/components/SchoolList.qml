@@ -5,6 +5,7 @@ import QtQuick.Layouts
 Page {
     id: schoolListPage
     signal showPageRequested(int pageIndex)
+    signal schoolSelected(string schoolId)
 
     ColumnLayout {
         anchors.fill: parent
@@ -18,21 +19,17 @@ Page {
 
         ListView {
             id: schoolList
-            spacing: 50
+            spacing: 0
             Layout.fillWidth: true
             Layout.fillHeight: true
             model: schoolModel
             delegate: ItemDelegate {
                 text: model.name
+                font.pointSize: 18
                 width: parent.width
-                Rectangle {
-                    color: "green"
-                    border.color: "black"
-                    border.width: 3
-                    anchors.fill: parent
-                }
 
                 onClicked: {
+                    schoolSelected(index)
                     showPageRequested(2)
                     console.log("Нажата школа");
                 }
@@ -40,6 +37,7 @@ Page {
 
             Label {
                 anchors.centerIn: parent
+                font.pointSize: 18
                 text: "У вас нет школ"
                 visible: schoolList.count === 0
             }

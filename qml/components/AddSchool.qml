@@ -137,7 +137,7 @@ Page {
                         arr.push({"name": cur.name, "size": cur.size ? cur.size : "Маленький"})
                     }
 
-                    schoolModel.addSchoolFromVariant(name, arr)
+                    schoolModel.addSchoolFromVariant(name, arr, [])
 
                     schoolNameField.text = ""
                     roomsModel.clear()
@@ -152,7 +152,7 @@ Page {
                 Layout.fillWidth: true
                 onClicked: {
                     schoolNameField.text = ""
-                    roomsMode.clear()
+                    roomsModel.clear()
                     showPageRequested(0)
                     console.log("Отмена добавления школы")
                 }

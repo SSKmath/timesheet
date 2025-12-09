@@ -7,7 +7,8 @@ SchoolModel::SchoolModel(QObject *parent) : QAbstractListModel(parent)
     beginResetModel();
     for (const QVariantMap &m : std::as_const(all))
     {
-        School *s = new School(m.value("name").toString(), this);
+        School *s = new School(m.value("id").toString(), m.value("name").toString(), this);
+
         QVariantList rooms = m.value("rooms").toList();
         RoomModel *rm = qobject_cast<RoomModel*>(s->roomsModel());
         for (const QVariant &rv : std::as_const(rooms))
@@ -15,6 +16,32 @@ SchoolModel::SchoolModel(QObject *parent) : QAbstractListModel(parent)
             QVariantMap r = rv.toMap();
             rm->appendRoom(r.value("name").toString(), r.value("size").toString());
         }
+
+        QObject::connect(s, &School::requestSave, this, [this, s]() {
+            if (m_storage)
+            {
+                bool ok = m_storage->saveSchool(s);
+                if (!ok)
+                    qWarning() << "Не удалось сохранить школу" << s->name();
+                else
+                    qDebug() << "автосохранение школы" << s->name();
+            }
+        });
+
+        QVariantList teachers = m.value("teachers").toList();
+        TeacherModel *tm = qobject_cast<TeacherModel*>(s->teachersModel());
+        for (const QVariant &tv : std::as_const(teachers))
+        {
+            QVariantMap t = tv.toMap();
+
+            const QVariantList daysVar = t.value("workingDays").toList();
+            QList<bool> days;
+            for (const QVariant &dv : daysVar)
+                days.append(dv.toBool());
+
+            tm->appendTeacher(t.value("surname").toString(), t.value("name").toString(), t.value("patronymic").toString(), t.value("subject").toString(), days);
+        }
+
         m_schools.append(s);
     }
     endResetModel();
@@ -36,38 +63,76 @@ QVariant SchoolModel::data(const QModelIndex &index, int role) const
         return QVariant();
 
     switch (role) {
-    case IdRole: return s->id();
-    case NameRole: return s->name();
-    case RoomsModelRole: return QVariant::fromValue(static_cast<QObject*>(s->roomsModel()));
+    case IdRole:            return s->id();
+    case NameRole:          return s->name();
+    case RoomsModelRole:    return QVariant::fromValue(static_cast<QObject*>(s->roomsModel()));
+    case TeachersModelRole: return QVariant::fromValue(static_cast<QObject*>(s->teachersModel()));
     default: return QVariant();
     }
 }
 
 QHash<int, QByteArray> SchoolModel::roleNames() const
 {
-    QHash<int, QByteArray> r;
-    r[IdRole] = "id";
-    r[NameRole] = "name";
-    r[RoomsModelRole] = "roomsModel";
-    return r;
+    QHash<int, QByteArray> role;
+    role[IdRole]            = "id";
+    role[NameRole]          = "name";
+    role[RoomsModelRole]    = "roomsModel";
+    role[TeachersModelRole] = "teachersModel";
+    return role;
 }
 
-void SchoolModel::addSchoolFromVariant(const QString &name, const QVariantList &rooms)
+void SchoolModel::addSchoolFromVariant(const QString &name, const QVariantList &rooms, const QVariantList &teachers)
 {
     if (name.trimmed().isEmpty())
         return;
 
     beginInsertRows(QModelIndex(), m_schools.count(), m_schools.count());
-    School *s = new School(name, this);
+
+    School *s = new School(QString(), name, this);
+
     RoomModel *rm = qobject_cast<RoomModel*>(s->roomsModel());
     if (rm)
     {
-        for (const QVariant &v : rooms)
+        for (const QVariant &v : std::as_const(rooms))
         {
             QVariantMap map = v.toMap();
             rm->appendRoom(map.value("name").toString(), map.value("size").toString());
         }
     }
+
+    QObject::connect(s, &School::requestSave, this, [this, s]() {
+        if (m_storage)
+        {
+            bool ok = m_storage->saveSchool(s);
+            if (!ok)
+                qWarning() << "Не удалось сохранить школу" << s->name();
+            else
+                qDebug() << "автосохранение школы" << s->name();
+        }
+    });
+
+    TeacherModel *tm = qobject_cast<TeacherModel*>(s->teachersModel());
+    if (tm)
+    {
+        for (const QVariant &v : std::as_const(teachers))
+        {
+            QVariantMap t = v.toMap();
+
+            const QVariantList daysVar = t.value("workingDays").toList();
+            QList<bool> days;
+            for (const QVariant &dv : daysVar)
+                days.append(dv.toBool());
+
+            tm->appendTeacher(
+                t.value("surname").toString(),
+                t.value("name").toString(),
+                t.value("patronymic").toString(),
+                t.value("subject").toString(),
+                days
+                );
+        }
+    }
+
     m_schools.append(s);
     endInsertRows();
 
@@ -116,10 +181,44 @@ QVariantMap SchoolModel::get(int index) const
         }
     }
     ans["rooms"] = rooms;
+
+    TeacherModel *tm = qobject_cast<TeacherModel*>(s->teachersModel());
+    QVariantList teachers;
+    if (tm)
+    {
+        for (int i = 0; i < tm->rowCount(); ++i)
+        {
+            QModelIndex ind = tm->index(i);
+            QVariantMap t;
+            t["surname"]     = tm->data(ind, TeacherModel::SurnameRole).toString();
+            t["name"]        = tm->data(ind, TeacherModel::NameRole).toString();
+            t["patronymic"]  = tm->data(ind, TeacherModel::PatronymicRole).toString();
+            t["subject"]     = tm->data(ind, TeacherModel::SubjectRole).toString();
+            t["workingDays"] = tm->data(ind, TeacherModel::WorkingDaysRole);
+            teachers.append(t);
+        }
+    }
+    ans["teachers"] = teachers;
     return ans;
 }
 
 int SchoolModel::count() const
 {
     return m_schools.count();
+}
+
+QObject *SchoolModel::roomModelAt(int index) const
+{
+    if (index < 0 || index >= m_schools.count())
+        return nullptr;
+    School *s = m_schools.at(index);
+    return s ? static_cast<QObject*>(s->roomsModel()) : nullptr;
+}
+
+QObject *SchoolModel::teacherModelAt(int index) const
+{
+    if (index < 0 || index >= m_schools.count())
+        return nullptr;
+    School *s = m_schools.at(index);
+    return s ? static_cast<QObject*>(s->teachersModel()) : nullptr;
 }

@@ -22,6 +22,40 @@ QVariant RoomModel::data(const QModelIndex &index, int role) const
     }
 }
 
+bool RoomModel::setData(const QModelIndex &index, const QVariant &value, int role)
+{
+    role += Qt::UserRole; //когда-нибудь: понять, почему qml передаёт считая с 1
+    //qDebug() << "RoomsModel::setData row=" << index.row() << "value=" << value << "role=" << role << "SizeRole=" << SizeRole;
+
+    if (!index.isValid() || index.row() < 0 || index.row() >= m_rooms.count())
+        return false;
+    Room *r = m_rooms.at(index.row());
+    if (!r)
+        return false;
+
+    switch (role) {
+    case NameRole:
+        r->setName(value.toString());
+        break;
+    case SizeRole:
+        r->setSize(value.toString());
+        break;
+    default:
+        return false;
+    }
+
+    emit dataChanged(index, index, {role});
+    emit dataModified();
+    return true;
+}
+
+Qt::ItemFlags RoomModel::flags(const QModelIndex &index) const
+{
+    if (!index.isValid())
+        return Qt::NoItemFlags;
+    return Qt::ItemIsSelectable | Qt::ItemIsEditable | Qt::ItemIsEnabled;
+}
+
 QHash<int, QByteArray> RoomModel::roleNames() const
 {
     QHash<int, QByteArray> roles;
@@ -40,6 +74,7 @@ void RoomModel::appendRoom(const QString &name, const QString &size)
     Room *r = new Room(name, size, this);
     m_rooms.append(r);
     endInsertRows();
+    emit dataModified();
 }
 
 void RoomModel::removeAt(int index)
@@ -51,6 +86,7 @@ void RoomModel::removeAt(int index)
     endRemoveRows();
     if (r)
         r->deleteLater();
+    emit dataModified();
 }
 
 int RoomModel::count() const

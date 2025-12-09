@@ -10,6 +10,13 @@ ApplicationWindow {
     height: 600
     title: "timesheet"
 
+    QtObject {
+        id: appState
+        property var teacherModel: null
+        property int teacherIndex: -1
+        property bool teacherIsNew: false
+    }
+
     property int currentPage: 0
 
     SchoolList {
@@ -17,6 +24,7 @@ ApplicationWindow {
         visible: currentPage === 0
         anchors.fill: parent
         onShowPageRequested: (pageIndex) => showPage(pageIndex)
+        onSchoolSelected: (schoolId) => schoolDetails.schoolId = schoolId
     }
 
     AddSchool {
@@ -29,6 +37,20 @@ ApplicationWindow {
     SchoolDetails {
         id: schoolDetails
         visible: currentPage === 2
+        anchors.fill: parent
+        onShowPageRequested: (pageIndex) => showPage(pageIndex)
+    }
+
+    TeacherDetails {
+        id: teacherDetails
+        visible: currentPage === 3
+        anchors.fill: parent
+        onShowPageRequested: (pageIndex) => showPage(pageIndex)
+    }
+
+    GroupDetails {
+        id: groupDetails
+        visible: currentPage === 4
         anchors.fill: parent
         onShowPageRequested: (pageIndex) => showPage(pageIndex)
     }

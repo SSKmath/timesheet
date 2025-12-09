@@ -6,6 +6,24 @@ Page {
     id: schoolDtailsPage
     signal showPageRequested(int pageIndex)
 
+    property int schoolId: -1
+    property string schoolName: ""
+    property var roomModel: null
+    property var teacherModel: null
+
+    onSchoolIdChanged: {
+        if (schoolId >= 0) {
+            var schoolData = schoolModel.get(schoolId)
+            if (schoolData) {
+                schoolName = schoolData.name
+                roomModel = schoolModel.roomModelAt(schoolId)
+                teacherModel = schoolModel.teacherModelAt(schoolId)
+                appState.teacherModel = teacherModel
+                console.log("Загружена школа:", schoolName, "с комнатами из C++ модели")
+            }
+        }
+    }
+
     header: ToolBar {
         ToolButton {
             text: "Назад"
@@ -14,28 +32,269 @@ Page {
                 console.log("Нажата кнопка назад")
             }
         }
-    }
-
-    ColumnLayout {
-        anchors.fill: parent
-        anchors.margins: 20
 
         Label {
-            text: "Детали школы"
+            text: schoolName
+            font.pointSize: 16
             font.bold: true
+            anchors.centerIn: parent
         }
+    }
 
-        RowLayout {
-            Label { text: "Количество классов:" }
-            SpinBox { value: 10 }
-        }
+    RowLayout {
+        anchors.fill: parent
+        spacing: 10
 
-        Label { text: "Расписание" }
-        ListView {
+        ColumnLayout {
             Layout.fillWidth: true
+            Layout.preferredWidth: 1
             Layout.fillHeight: true
-            model: ["Понедельник: Математика", "Вторник: Информатика"]
-            delegate: Label { text: modelData }
+            Layout.alignment: Qt.AlignTop
+            anchors.margins: 8
+
+            Label {
+                text: "Кабинеты"
+                font.bold: true
+            }
+
+            ScrollView {
+                Layout.fillWidth: true
+
+                ListView {
+                    id: roomsListView
+                    width: parent.width
+                    model: roomModel
+                    delegate: Rectangle {
+                        width: roomsListView.width
+                        height: 48
+                        color: "transparent"
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.margins: 4
+                            spacing: 8
+
+                            TextField {
+                                id: nameEditor
+                                text: name
+                                placeholderText: "Название кабинета"
+                                Layout.fillWidth: true
+                                onEditingFinished: {
+                                    var ind = roomsListView.model.index(index, 0)
+                                    roomsListView.model.setData(ind, text, 1)
+                                    console.log("Изменено имя:", text)
+                                }
+                            }
+
+                            ComboBox {
+                                id: sizeCombo
+                                model: ["Маленький", "Большой"]
+                                currentIndex: size === "Большой" ? 1 : 0
+                                onCurrentTextChanged: {
+                                    var idx = roomsListView.model.index(index, 0)
+                                    roomsListView.model.setData(idx, currentText, 2)
+                                    console.log("Изменён размер для", name, "->", currentText)
+                                }
+                            }
+
+                            Button {
+                                text: "Удалить"
+                                onClicked: {
+                                    roomModel.removeAt(index)
+                                    console.log("Удаляем кабинет:", name)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Item { // Костыль
+                Layout.fillHeight: true
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 8
+
+                TextField {
+                    id: newRoomName
+                    placeholderText: "Новое название кабинета"
+                    Layout.fillWidth: true
+                    onAccepted: addRoom()
+                }
+
+                ComboBox {
+                    id: newRoomSize
+                    model: ["Маленький", "Большой"]
+                    currentIndex: 0
+                    Layout.preferredWidth: 120
+                }
+
+                Button {
+                    text: "Добавить"
+                    onClicked: {
+                        var name = newRoomName.text.trim()
+                        if (name.length === 0) {
+                            console.log("Имя кабинета пустое - пропускаем")
+                            return
+                        }
+                        roomModel.appendRoom(name, newRoomSize.currentText)
+                        newRoomName.text = ""
+                        newRoomName.forceActiveFocus()
+                        console.log("Добавлен кабинет:", name, newRoomSize.currentText)
+                    }
+                }
+            }
+        }
+
+        ColumnLayout {
+            Layout.fillWidth: true
+            Layout.preferredWidth: 1
+            Layout.fillHeight: true
+            Layout.alignment: Qt.AlignTop
+            anchors.margins: 8
+
+            Label {
+                text: "Учителя"
+                font.bold: true
+            }
+
+            ScrollView {
+                Layout.fillWidth: true
+
+                ListView {
+                    id: teachersListView
+                    width: parent.width
+                    model: teacherModel
+                    delegate: Rectangle {
+                        width: parent.width
+                        height: 48
+                        color: "transparent"
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.margins: 4
+                            spacing: 8
+
+                            Label {
+                                text: surname + " " + name.charAt(0) + ". " + patronymic.charAt(0) + "."
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    onClicked: {
+                                        appState.teacherIndex = index
+                                        appState.teacherIsNew = false
+                                        showPageRequested(3)
+                                        console.log("Показать информацию об учителе");
+                                    }
+                                }
+                            }
+
+                            Item { // Костыль, Label и Button у левой и правой границы соответственно
+                                Layout.fillWidth: true
+                            }
+
+                            Button {
+                                text: "Удалить"
+                                onClicked: {
+                                    teacherModel.removeAt(index)
+                                    console.log("Удаляем учителя:", name)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Item { // Костыль, Button снизу
+                Layout.fillHeight: true
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignHCenter
+                Button {
+                    text: "Добавить"
+                    onClicked: {
+                        appState.teacherIndex = -1
+                        appState.teacherIsNew = true
+                        showPageRequested(3)
+                    }
+                }
+            }
+        }
+
+        ColumnLayout {
+            Layout.fillWidth: true
+            Layout.preferredWidth: 1
+            Layout.fillHeight: true
+            Layout.alignment: Qt.AlignTop
+            anchors.margins: 8
+
+            Label {
+                text: "Классы"
+                font.bold: true
+            }
+            ScrollView {
+                Layout.fillWidth: true
+
+                ListView {
+                    id: klassListView
+                    width: parent.width
+                    model: ListModel {
+                        ListElement { name: "10А" }
+                        ListElement { name: "10Б" }
+                    }
+                    delegate: Rectangle {
+                        width: parent.width
+                        height: 48
+                        color: "transparent"
+
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.margins: 4
+                            spacing: 8
+
+                            Label {
+                                text: name
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    onClicked: {
+                                        showPageRequested(4)
+                                        console.log("Показать информацию о классе");
+                                    }
+                                }
+                            }
+
+                            Item { // Костыль, Label и Button у левой и правой границы соответственно
+                                Layout.fillWidth: true
+                            }
+
+                            Button {
+                                text: "Удалить"
+                                onClicked: {
+                                    //roomModel.removeAt(index)
+                                    console.log("Удаляем класс:", name)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Item { // Костыль, Button снизу
+                Layout.fillHeight: true
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignHCenter
+                Button {
+                    text: "Добавить"
+                }
+            }
         }
     }
 }
