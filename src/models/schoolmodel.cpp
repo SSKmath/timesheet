@@ -7,7 +7,7 @@ SchoolModel::SchoolModel(QObject *parent) : QAbstractListModel(parent)
     beginResetModel();
     for (const QVariantMap &m : std::as_const(all))
     {
-        School *s = new School(m.value("name").toString(), this);
+        School *s = new School(m.value("id").toString(), m.value("name").toString(), this);
         QVariantList rooms = m.value("rooms").toList();
         RoomModel *rm = qobject_cast<RoomModel*>(s->roomsModel());
         for (const QVariant &rv : std::as_const(rooms))
@@ -15,6 +15,18 @@ SchoolModel::SchoolModel(QObject *parent) : QAbstractListModel(parent)
             QVariantMap r = rv.toMap();
             rm->appendRoom(r.value("name").toString(), r.value("size").toString());
         }
+
+        QObject::connect(s, &School::requestSave, this, [this, s]() {
+            if (m_storage)
+            {
+                bool ok = m_storage->saveSchool(s);
+                if (!ok)
+                    qWarning() << "Не удалось сохранить школу" << s->name();
+                else
+                    qDebug() << "автосохранение школы" << s->name();
+            }
+        });
+
         m_schools.append(s);
     }
     endResetModel();
@@ -58,7 +70,7 @@ void SchoolModel::addSchoolFromVariant(const QString &name, const QVariantList &
         return;
 
     beginInsertRows(QModelIndex(), m_schools.count(), m_schools.count());
-    School *s = new School(name, this);
+    School *s = new School(QString(), name, this);
     RoomModel *rm = qobject_cast<RoomModel*>(s->roomsModel());
     if (rm)
     {
@@ -68,6 +80,18 @@ void SchoolModel::addSchoolFromVariant(const QString &name, const QVariantList &
             rm->appendRoom(map.value("name").toString(), map.value("size").toString());
         }
     }
+
+    QObject::connect(s, &School::requestSave, this, [this, s]() {
+        if (m_storage)
+        {
+            bool ok = m_storage->saveSchool(s);
+            if (!ok)
+                qWarning() << "Не удалось сохранить школу" << s->name();
+            else
+                qDebug() << "автосохранение школы" << s->name();
+        }
+    });
+
     m_schools.append(s);
     endInsertRows();
 
@@ -122,4 +146,12 @@ QVariantMap SchoolModel::get(int index) const
 int SchoolModel::count() const
 {
     return m_schools.count();
+}
+
+QObject *SchoolModel::roomsModelAt(int index) const
+{
+    if (index < 0 || index >= m_schools.count())
+        return nullptr;
+    School *s = m_schools.at(index);
+    return s ? static_cast<QObject*>(s->roomsModel()) : nullptr;
 }

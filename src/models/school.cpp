@@ -1,8 +1,9 @@
 #include "school.h"
 
-School::School(const QString &name, QObject *parent) : QObject(parent), m_id(QUuid::createUuid().toString()), m_name(name)
+School::School(const QString &id, const QString &name, QObject *parent) : QObject(parent), m_id(id.isEmpty() ? QUuid::createUuid().toString() : id), m_name(name)
 {
     m_rooms = new RoomModel(this);
+    QObject::connect(m_rooms, &RoomModel::dataModified, this, &School::saveToStorage);
 }
 
 QString School::id() const
@@ -21,9 +22,16 @@ void School::setName(const QString &n)
         return;
     m_name = n;
     emit nameChanged();
+    emit requestSave();
 }
 
 QObject* School::roomsModel() const
 {
     return m_rooms;
+}
+
+void School::saveToStorage()
+{
+    emit requestSave();
+    qDebug() << "Школа" << m_name << "запрашивает сохранение";
 }

@@ -17,6 +17,7 @@ ApplicationWindow {
         visible: currentPage === 0
         anchors.fill: parent
         onShowPageRequested: (pageIndex) => showPage(pageIndex)
+        onSchoolSelected: (schoolId) => schoolDetails.schoolId = schoolId
     }
 
     AddSchool {
@@ -29,6 +30,20 @@ ApplicationWindow {
     SchoolDetails {
         id: schoolDetails
         visible: currentPage === 2
+        anchors.fill: parent
+        onShowPageRequested: (pageIndex) => showPage(pageIndex)
+    }
+
+    TeacherDetails {
+        id: teacherDetails
+        visible: currentPage === 3
+        anchors.fill: parent
+        onShowPageRequested: (pageIndex) => showPage(pageIndex)
+    }
+
+    GroupDetails {
+        id: groupDetails
+        visible: currentPage === 4
         anchors.fill: parent
         onShowPageRequested: (pageIndex) => showPage(pageIndex)
     }
