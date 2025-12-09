@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(Qt6 REQUIRED COMPONENTS Quick)
 find_package(Qt6 REQUIRED COMPONENTS Core)
 find_package(Qt6 REQUIRED COMPONENTS Core)
+find_package(Qt6 REQUIRED COMPONENTS Core)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
@@ -22,14 +23,16 @@ qt_add_qml_module(apptimesheet
         qml/components/SchoolList.qml
         qml/components/AddSchool.qml
         qml/components/SchoolDetails.qml
+        qml/components/TeacherDetails.qml
+        qml/components/GroupDetails.qml
     SOURCES
         src/models/room.h src/models/room.cpp
         src/models/roommodel.h src/models/roommodel.cpp
-        SOURCES src/models/school.h src/models/school.cpp
-        SOURCES src/models/schoolmodel.h src/models/schoolmodel.cpp
-        SOURCES src/storage/schoolstorage.h src/storage/schoolstorage.cpp
-        QML_FILES qml/components/TeacherDetails.qml
-        QML_FILES qml/components/GroupDetails.qml
+        src/models/school.h src/models/school.cpp
+        src/models/schoolmodel.h src/models/schoolmodel.cpp
+        src/storage/schoolstorage.h src/storage/schoolstorage.cpp
+        src/models/teacher.h src/models/teacher.cpp
+        src/models/teachermodel.h src/models/teachermodel.cpp
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
@@ -46,6 +49,7 @@ set_target_properties(apptimesheet PROPERTIES
 target_link_libraries(apptimesheet
     PRIVATE Qt6::Quick
 )
+target_link_libraries(apptimesheet PRIVATE Qt6::Core)
 target_link_libraries(apptimesheet PRIVATE Qt6::Core)
 target_link_libraries(apptimesheet PRIVATE Qt6::Core)
 
