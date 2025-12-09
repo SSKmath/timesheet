@@ -241,21 +241,56 @@ Page {
                         ListElement { name: "10А" }
                         ListElement { name: "10Б" }
                     }
-                    delegate: ItemDelegate {
+                    delegate: Rectangle {
                         width: parent.width
-                        height: 60
-                        //color: "transparent"
-                        Label {
-                            text: name
-                        }
-                        onClicked: {
-                            showPageRequested(4)
-                            console.log("Показать информацию о классе");
+                        height: 48
+                        color: "transparent"
+
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.margins: 4
+                            spacing: 8
+
+                            Label {
+                                text: name
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    onClicked: {
+                                        showPageRequested(4)
+                                        console.log("Показать информацию о классе");
+                                    }
+                                }
+                            }
+
+                            Item { // Костыль, Label и Button у левой и правой границы соответственно
+                                Layout.fillWidth: true
+                            }
+
+                            Button {
+                                text: "Удалить"
+                                onClicked: {
+                                    //roomModel.removeAt(index)
+                                    console.log("Удаляем класс:", name)
+                                }
+                            }
                         }
                     }
                 }
             }
 
+            Item { // Костыль, Button снизу
+                Layout.fillHeight: true
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignHCenter
+                Button {
+                    text: "Добавить"
+                }
+            }
         }
     }
 }
