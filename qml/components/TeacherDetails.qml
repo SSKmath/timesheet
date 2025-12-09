@@ -15,21 +15,35 @@ Page {
             }
         }
         Label {
-            text: "Дополнительная информация"
+            text: "Информация об учителе"
             font.bold: true
             anchors.centerIn: parent
         }
     }
-    ListModel {
-        id: teacherModel
-    }
-    TextField {
-        id: teacherName
-        placeholderText: "ФИО"
-        Layout.fillWidth: true
 
-        x: 30
-        y: 20
+    RowLayout {
+        anchors.margins: 8
+        anchors.left: parent.left
+        anchors.right: parent.right
+        spacing: 10
+
+        TextField {
+            id: teacherSurName
+            placeholderText: "Фамилия"
+            Layout.fillWidth: true
+        }
+
+        TextField {
+            id: teacherName
+            placeholderText: "Имя"
+            Layout.fillWidth: true
+        }
+
+        TextField {
+            id: teacherPatronymic
+            placeholderText: "Отчество"
+            Layout.fillWidth: true
+        }
     }
 
     GridLayout {
@@ -114,8 +128,8 @@ Page {
             }
         }
 
-        Item{
-            ListModel{
+        Item {
+            ListModel {
                 id: weekDays
                 ListElement{day: "Понедельник"}
                 ListElement{day: "Вторник"}
@@ -133,7 +147,7 @@ Page {
                 Repeater {
                     model: weekDays
 
-                    Row{
+                    Row {
                         spacing: 10
                         Rectangle {
                             id: checkBox
@@ -144,7 +158,6 @@ Page {
 
                             property bool checked: false
 
-                            // Галочка (видна только когда checked = true)
                             Text {
                                 text: "✓"
                                 font.pixelSize: 15
@@ -153,7 +166,6 @@ Page {
                                 visible: parent.checked
                             }
 
-                            // Обработчик кликов
                             MouseArea {
                                 anchors.fill: parent
                                 onClicked: checkBox.checked = !checkBox.checked

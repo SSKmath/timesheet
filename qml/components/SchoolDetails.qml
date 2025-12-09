@@ -47,8 +47,8 @@ Page {
             Layout.fillWidth: true
             Layout.preferredWidth: 1
             Layout.fillHeight: true
-            //anchors.margins: 16
-            spacing: 12
+            Layout.alignment: Qt.AlignTop
+            anchors.margins: 8
 
             Label {
                 text: "Кабинеты"
@@ -57,7 +57,6 @@ Page {
 
             ScrollView {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 240
 
                 ListView {
                     id: roomsListView
@@ -107,6 +106,10 @@ Page {
                 }
             }
 
+            Item { // Костыль
+                Layout.fillHeight: true
+            }
+
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 8
@@ -146,14 +149,16 @@ Page {
             Layout.fillWidth: true
             Layout.preferredWidth: 1
             Layout.fillHeight: true
+            Layout.alignment: Qt.AlignTop
+            anchors.margins: 8
 
             Label {
                 text: "Учителя"
                 font.bold: true
             }
+
             ScrollView {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 240
 
                 ListView {
                     id: teachersListView
@@ -163,18 +168,54 @@ Page {
                        ListElement { name: "ФИО 1" }
                        ListElement { name: "ФИО 2" }
                     }
-                    delegate: ItemDelegate {
+                    delegate: Rectangle {
                         width: parent.width
-                        height: 60
-                        //color: "transparent"
-                        Label {
-                            text: name
-                        }
-                        onClicked: {
-                            showPageRequested(3)
-                            console.log("Показать информацию об учителе");
+                        height: 48
+                        color: "transparent"
+
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.margins: 4
+                            spacing: 8
+
+                            Label {
+                                text: name
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    onClicked: {
+                                        showPageRequested(3)
+                                        console.log("Показать информацию об учителе");
+                                    }
+                                }
+                            }
+
+                            Item { // Костыль, Label и Button у левой и правой границы соответственно
+                                Layout.fillWidth: true
+                            }
+
+                            Button {
+                                text: "Удалить"
+                                onClicked: {
+                                    //roomModel.removeAt(index)
+                                    console.log("Удаляем учителя:", name)
+                                }
+                            }
                         }
                     }
+                }
+            }
+
+            Item { // Костыль, Button снизу
+                Layout.fillHeight: true
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignHCenter
+                Button {
+                    text: "Добавить"
                 }
             }
         }
@@ -183,6 +224,8 @@ Page {
             Layout.fillWidth: true
             Layout.preferredWidth: 1
             Layout.fillHeight: true
+            Layout.alignment: Qt.AlignTop
+            anchors.margins: 8
 
             Label {
                 text: "Классы"
@@ -190,7 +233,6 @@ Page {
             }
             ScrollView {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 240
 
                 ListView {
                     id: klassListView
