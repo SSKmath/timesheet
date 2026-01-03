@@ -76,6 +76,7 @@ bool SchoolStorage::saveSchool(const QVariantMap &schoolData)
     {
         QVariantMap tmap = tv.toMap();
         QJsonObject to;
+        to["id"]         = tmap.value("id").toInt();
         to["surname"]    = tmap.value("surname").toString();
         to["name"]       = tmap.value("name").toString();
         to["patronymic"] = tmap.value("patronymic").toString();
@@ -127,6 +128,7 @@ bool SchoolStorage::saveSchool(School *school)
         {
             QModelIndex ind = tm->index(i);
             QVariantMap t;
+            t["id"]          = tm->data(ind, TeacherModel::IdRole).toInt();
             t["surname"]     = tm->data(ind, TeacherModel::SurnameRole).toString();
             t["name"]        = tm->data(ind, TeacherModel::NameRole).toString();
             t["patronymic"]  = tm->data(ind, TeacherModel::PatronymicRole).toString();
@@ -176,6 +178,7 @@ QVariantMap SchoolStorage::loadSchool(const QString &id) const
     {
         QJsonObject to = v.toObject();
         QVariantMap tm;
+        tm["id"]         = to.value("id").toInt();
         tm["surname"]    = to.value("surname").toString();
         tm["name"]       = to.value("name").toString();
         tm["patronymic"] = to.value("patronymic").toString();
@@ -230,6 +233,7 @@ QList<QVariantMap> SchoolStorage::loadAllSchools() const
         {
             QJsonObject to = v.toObject();
             QVariantMap tm;
+            tm["id"]         = to.value("id").toInt();
             tm["surname"]    = to.value("surname").toString();
             tm["name"]       = to.value("name").toString();
             tm["patronymic"] = to.value("patronymic").toString();

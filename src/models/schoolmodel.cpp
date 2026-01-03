@@ -34,12 +34,32 @@ SchoolModel::SchoolModel(QObject *parent) : QAbstractListModel(parent)
         {
             QVariantMap t = tv.toMap();
 
+            int id = t.value("id").toInt();
+
             const QVariantList daysVar = t.value("workingDays").toList();
             QList<bool> days;
             for (const QVariant &dv : daysVar)
                 days.append(dv.toBool());
 
-            tm->appendTeacher(t.value("surname").toString(), t.value("name").toString(), t.value("patronymic").toString(), t.value("subject").toString(), days);
+            if(id > 0)
+            {
+            tm->appendTeacherWithId(id,
+                              t.value("surname").toString(),
+                              t.value("name").toString(),
+                              t.value("patronymic").toString(),
+                              t.value("subject").toString(),
+                              days
+                              );
+            }
+            else
+            {
+                tm->appendTeacher(t.value("surname").toString(),
+                                  t.value("name").toString(),
+                                  t.value("patronymic").toString(),
+                                  t.value("subject").toString(),
+                                  days
+                                  );
+            }
         }
 
         m_schools.append(s);
@@ -118,18 +138,32 @@ void SchoolModel::addSchoolFromVariant(const QString &name, const QVariantList &
         {
             QVariantMap t = v.toMap();
 
+            int id = t.value("id").toInt();
+
             const QVariantList daysVar = t.value("workingDays").toList();
             QList<bool> days;
             for (const QVariant &dv : daysVar)
                 days.append(dv.toBool());
 
-            tm->appendTeacher(
-                t.value("surname").toString(),
-                t.value("name").toString(),
-                t.value("patronymic").toString(),
-                t.value("subject").toString(),
-                days
-                );
+            if(id > 0)
+            {
+                tm->appendTeacherWithId(id,
+                                  t.value("surname").toString(),
+                                  t.value("name").toString(),
+                                  t.value("patronymic").toString(),
+                                  t.value("subject").toString(),
+                                  days
+                                  );
+            }
+            else
+            {
+                tm->appendTeacher(t.value("surname").toString(),
+                                  t.value("name").toString(),
+                                  t.value("patronymic").toString(),
+                                  t.value("subject").toString(),
+                                  days
+                                  );
+            }
         }
     }
 
@@ -190,6 +224,7 @@ QVariantMap SchoolModel::get(int index) const
         {
             QModelIndex ind = tm->index(i);
             QVariantMap t;
+            t["id"]          = tm->data(ind, TeacherModel::IdRole).toInt();
             t["surname"]     = tm->data(ind, TeacherModel::SurnameRole).toString();
             t["name"]        = tm->data(ind, TeacherModel::NameRole).toString();
             t["patronymic"]  = tm->data(ind, TeacherModel::PatronymicRole).toString();

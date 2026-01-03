@@ -1,6 +1,6 @@
 #include "teachermodel.h"
 
-TeacherModel::TeacherModel(QObject *parent) : QAbstractListModel(parent)  {}
+TeacherModel::TeacherModel(QObject *parent) : QAbstractListModel(parent), m_nextId(1)  {}
 
 int TeacherModel::rowCount(const QModelIndex &parent) const
 {
@@ -16,6 +16,7 @@ QVariant TeacherModel::data(const QModelIndex &index, int role) const
     Teacher *t = m_teachers.at(index.row());
 
     switch (role) {
+    case IdRole:         return t->id();
     case SurnameRole:    return t->surname();
     case NameRole:       return t->name();
     case PatronymicRole: return t->patronymic();
@@ -76,6 +77,7 @@ bool TeacherModel::setData(const QModelIndex &index, const QVariant &value, int 
 QHash<int, QByteArray> TeacherModel::roleNames() const
 {
     QHash<int, QByteArray> roles;
+    roles[IdRole]          = "id";
     roles[SurnameRole]     = "surname";
     roles[NameRole]        = "name";
     roles[PatronymicRole]  = "patronymic";
@@ -94,14 +96,33 @@ void TeacherModel::appendTeacher(const QString &surname,
         subject.isEmpty() || workingDays.size() != 6)
         return;
 
+    int id = m_nextId++;
+    appendTeacherWithId(id, surname, name, patronymic, subject, workingDays);
+}
+
+void TeacherModel::appendTeacherWithId(int id,
+                                       const QString &surname,
+                                       const QString &name,
+                                       const QString &patronymic,
+                                       const QString &subject,
+                                       const QList<bool> &workingDays)
+{
+    if (surname.isEmpty() || name.isEmpty() || patronymic.isEmpty() ||
+        subject.isEmpty() || workingDays.size() != 6)
+        return;
+
     const int ind = m_teachers.count();
     beginInsertRows(QModelIndex(), ind, ind);
 
-    Teacher *t = new Teacher(surname, name, patronymic, subject, this);
+    Teacher *t = new Teacher(id, surname, name, patronymic, subject, this);
     t->setWorkingDays(workingDays);
 
     m_teachers.append(t);
     endInsertRows();
+
+    if (id >= m_nextId)
+        m_nextId = id + 1;
+
     emit dataModified();
 }
 
@@ -114,6 +135,7 @@ void TeacherModel::removeAt(int index)
     endRemoveRows();
     if (t)
         t->deleteLater();
+
     emit dataModified();
 }
 

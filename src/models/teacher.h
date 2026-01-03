@@ -11,12 +11,19 @@ class Teacher : public QObject
     Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
     Q_PROPERTY(QString patronymic READ patronymic WRITE setPatronymic NOTIFY patronymicChanged)
     Q_PROPERTY(QString subject READ subject WRITE setSubject NOTIFY subjectChanged)
-
     Q_PROPERTY(QList<bool> workingDays READ workingDays WRITE setWorkingDays NOTIFY workingDaysChanged)
 
 public:
     explicit Teacher(QObject *parent = nullptr);
-    Teacher(const QString &surname, const QString &size, const QString &patronymic, const QString &subject, QObject *parent = nullptr);
+
+    Teacher(int id,
+            const QString &surname,
+            const QString &name,
+            const QString &patronymic,
+            const QString &subject,
+            QObject *parent = nullptr);
+
+    int id() const;
 
     QString surname() const;
     void setSurname(const QString &v);
@@ -41,15 +48,14 @@ signals:
     void nameChanged();
     void patronymicChanged();
     void subjectChanged();
-
     void workingDaysChanged();
 
 private:
+    int m_id = -1;
     QString m_surname;
     QString m_name;
     QString m_patronymic;
     QString m_subject;
-
     QList<bool> m_workingDays;
 };
 
