@@ -1,4 +1,5 @@
 #include "teachermodel.h"
+#include <utility>
 
 TeacherModel::TeacherModel(QObject *parent) : QAbstractListModel(parent), m_nextId(1)  {}
 

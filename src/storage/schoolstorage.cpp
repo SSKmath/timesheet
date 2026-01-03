@@ -4,6 +4,12 @@
 #include <QSaveFile>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QJsonDocument>
+#include <QFile>
+#include <QDebug>
+#include <QStringList>
+#include <utility>
+
 #include "../models/school.h"
 
 SchoolStorage::SchoolStorage(QObject *parent) : QObject(parent)
@@ -92,6 +98,44 @@ bool SchoolStorage::saveSchool(const QVariantMap &schoolData)
     }
     obj["teachers"] = teachersArr;
 
+    QJsonArray classesArr;
+    QVariantList classes = schoolData.value("classes").toList();
+    for (const QVariant &cv : std::as_const(classes))
+    {
+        QVariantMap cmap = cv.toMap();
+        QJsonObject co;
+        co["id"]   = cmap.value("id").toInt();
+        co["name"] = cmap.value("name").toString();
+        classesArr.append(co);
+    }
+    obj["classes"] = classesArr;
+
+    QJsonArray lessonsArr;
+    QVariantList lessons = schoolData.value("lessons").toList();
+    for (const QVariant &lv : std::as_const(lessons))
+    {
+        QVariantMap lmap = lv.toMap();
+        QJsonObject lo;
+        lo["id"]        = lmap.value("id").toInt();
+        lo["name"]      = lmap.value("name").toString();
+        lo["isDouble"]  = lmap.value("isDouble").toBool();
+        lo["teacherId"] = lmap.value("teacherId").toInt();
+
+        QJsonArray classesArr;
+        QVariantList classesList = lmap.value("classes").toList();
+        for (const QVariant &cv : std::as_const(classesList))
+        {
+            QVariantMap cm = cv.toMap();
+            QJsonObject co;
+            co["id"] = cm.value("id").toInt();
+            classesArr.append(co);
+        }
+        lo["classes"] = classesArr;
+
+        lessonsArr.append(lo);
+    }
+    obj["lessons"] = lessonsArr;
+
     QJsonDocument doc(obj);
     QString path = QDir(m_dir).filePath(id + ".json");
     return writeJsonToFile(path, doc.toJson(QJsonDocument::Indented));
@@ -138,6 +182,49 @@ bool SchoolStorage::saveSchool(School *school)
         }
     }
     m["teachers"] = teachers;
+
+    QVariantList classes;
+    ClassModel *cm = qobject_cast<ClassModel*>(school->classesModel());
+    if (cm)
+    {
+        for (int i = 0; i < cm->rowCount(); ++i)
+        {
+            QModelIndex ind = cm->index(i);
+            QVariantMap c;
+            c["id"]   = cm->data(ind, ClassModel::IdRole).toInt();
+            c["name"] = cm->data(ind, ClassModel::NameRole).toString();
+            classes.append(c);
+        }
+    }
+    m["classes"] = classes;
+
+    QVariantList lessons;
+    LessonModel *lm = qobject_cast<LessonModel*>(school->lessonsModel());
+    if (lm)
+    {
+        for (int i = 0; i < lm->rowCount(); ++i)
+        {
+            QModelIndex ind = lm->index(i);
+            QVariantMap l;
+            l["id"]        = lm->data(ind, LessonModel::IdRole).toInt();
+            l["name"]      = lm->data(ind, LessonModel::NameRole).toString();
+            l["isDouble"]  = lm->data(ind, LessonModel::IsDoubleRole).toBool();
+            l["teacherId"] = lm->data(ind, LessonModel::TeacherIdRole).toInt();
+
+            QVariantList classesVar = lm->data(ind, LessonModel::ClassesRole).toList();
+            QVariantList classesJson;
+            for (const QVariant &cv : std::as_const(classesVar))
+            {
+                QVariantMap cm;
+                cm["id"] = cv.toInt();
+                classesJson.append(cm);
+            }
+            l["classes"] = classesJson;
+
+            lessons.append(l);
+        }
+    }
+    m["lessons"] = lessons;
 
     return saveSchool(m);
 }
@@ -193,6 +280,44 @@ QVariantMap SchoolStorage::loadSchool(const QString &id) const
     }
     ans["teachers"] = teachers;
 
+    QVariantList classes;
+    QJsonArray caTop = o.value("classes").toArray();
+    for (const QJsonValue &v : std::as_const(caTop))
+    {
+        QJsonObject co = v.toObject();
+        QVariantMap cm;
+        cm["id"]   = co.value("id").toInt();
+        cm["name"] = co.value("name").toString();
+        classes.append(cm);
+    }
+    ans["classes"] = classes;
+
+    QVariantList lessons;
+    QJsonArray la = o.value("lessons").toArray();
+    for (const QJsonValue &v : std::as_const(la))
+    {
+        QJsonObject lo = v.toObject();
+        QVariantMap lm;
+        lm["id"]        = lo.value("id").toInt();
+        lm["name"]      = lo.value("name").toString();
+        lm["isDouble"]  = lo.value("isDouble").toBool();
+        lm["teacherId"] = lo.value("teacherId").toInt();
+
+        QVariantList classes;
+        QJsonArray ca = lo.value("classes").toArray();
+        for (const QJsonValue &cv : std::as_const(ca))
+        {
+            QJsonObject co = cv.toObject();
+            QVariantMap cm;
+            cm["id"] = co.value("id").toInt();
+            classes.append(cm);
+        }
+        lm["classes"] = classes;
+
+        lessons.append(lm);
+    }
+    ans["lessons"] = lessons;
+
     return ans;
 }
 
@@ -247,6 +372,44 @@ QList<QVariantMap> SchoolStorage::loadAllSchools() const
             teachers.append(tm);
         }
         m["teachers"] = teachers;
+
+        QVariantList classes;
+        QJsonArray caTop = o.value("classes").toArray();
+        for (const QJsonValue &v : std::as_const(caTop))
+        {
+            QJsonObject co = v.toObject();
+            QVariantMap cm;
+            cm["id"]   = co.value("id").toInt();
+            cm["name"] = co.value("name").toString();
+            classes.append(cm);
+        }
+        m["classes"] = classes;
+
+        QVariantList lessons;
+        QJsonArray la = o.value("lessons").toArray();
+        for (const QJsonValue &v : std::as_const(la))
+        {
+            QJsonObject lo = v.toObject();
+            QVariantMap lm;
+            lm["id"]        = lo.value("id").toInt();
+            lm["name"]      = lo.value("name").toString();
+            lm["isDouble"]  = lo.value("isDouble").toBool();
+            lm["teacherId"] = lo.value("teacherId").toInt();
+
+            QVariantList classes;
+            QJsonArray ca = lo.value("classes").toArray();
+            for (const QJsonValue &cv : std::as_const(ca))
+            {
+                QJsonObject co = cv.toObject();
+                QVariantMap cm;
+                cm["id"] = co.value("id").toInt();
+                classes.append(cm);
+            }
+            lm["classes"] = classes;
+
+            lessons.append(lm);
+        }
+        m["lessons"] = lessons;
 
         ans.append(m);
     }

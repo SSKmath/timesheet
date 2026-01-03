@@ -4,8 +4,15 @@ School::School(const QString &id, const QString &name, QObject *parent) : QObjec
 {
     m_rooms = new RoomModel(this);
     QObject::connect(m_rooms, &RoomModel::dataModified, this, &School::saveToStorage);
+
     m_teachers = new TeacherModel(this);
     QObject::connect(m_teachers, &TeacherModel::dataModified, this, &School::saveToStorage);
+
+    m_lessons = new LessonModel(this);
+    QObject::connect(m_lessons, &LessonModel::dataModified, this, &School::saveToStorage);
+
+    m_classes = new ClassModel(this);
+    QObject::connect(m_classes, &ClassModel::dataModified, this, &School::saveToStorage);
 }
 
 QString School::id() const
@@ -35,6 +42,16 @@ QObject* School::roomsModel() const
 QObject* School::teachersModel() const
 {
     return m_teachers;
+}
+
+QObject* School::lessonsModel() const
+{
+    return m_lessons;
+}
+
+QObject* School::classesModel() const
+{
+    return m_classes;
 }
 
 void School::saveToStorage()
