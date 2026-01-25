@@ -6,6 +6,9 @@ Page {
     id: teacherDetailsPage
     signal showPageRequested(int pageIndex)
 
+    readonly property var schoolclassModel: appState.schoolclassModel
+    readonly property var lessonModel: appState.lessonModel
+
     header: ToolBar {
         ToolButton {
             text: "Назад"
@@ -23,7 +26,7 @@ Page {
         RowLayout {
             Label {
                 //anchors.margins: 8
-                text: "10А"
+                text: schoolclassModel === null ? "error" : schoolclassModel.name
                 font.bold: true
             }
 
@@ -36,14 +39,13 @@ Page {
                 text: "Классный руководитель"
                 font.bold: true
             }
+
             TextField{
                 id: nameClassTeacher
-                text: name
+                //text:
                 placeholderText: "Имя преподавателя"
                 //Layout.fillWidth: true
-
             }
-
         }
 
         Label {
@@ -65,10 +67,7 @@ Page {
                 ListView {
                     id: subjectListView
                     width: parent.width
-                    model: ListModel {
-                        ListElement {subject: "Физика"; name: "ФИО 1"; subjectCount: 6; pair: true}
-                        ListElement {subject: "Матиматика"; name: "ФИО 2"; subjectCount: 6; pair: true}
-                    }
+                    model: lessonModel
                     delegate: Rectangle {
                         width: subjectListView.width
                         height: 48
@@ -80,7 +79,8 @@ Page {
 
                             TextField {
                                 id: subjectEditor
-                                text: subject
+                                //text: subject
+                                text: "text"
                                 placeholderText: "Название предмета"
                                 Layout.fillWidth: true
                                 onEditingFinished: {
