@@ -5,7 +5,9 @@
 #include <QUuid>
 #include "roommodel.h"
 #include "teachermodel.h"
-
+#include "lessonmodel.h"
+#include "classmodel.h"
+#include <QString>
 
 class School : public QObject
 {
@@ -14,6 +16,9 @@ class School : public QObject
     Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
     Q_PROPERTY(QObject* roomsModel READ roomsModel CONSTANT)
     Q_PROPERTY(QObject* teachersModel READ teachersModel CONSTANT)
+    Q_PROPERTY(QObject* lessonsModel READ lessonsModel CONSTANT)
+    Q_PROPERTY(QObject* classesModel READ classesModel CONSTANT)
+
 public:
     explicit School(const QString &id, const QString &name, QObject *parent = nullptr);
 
@@ -23,6 +28,8 @@ public:
 
     QObject* roomsModel() const;
     QObject* teachersModel() const;
+    QObject* lessonsModel() const;
+    QObject* classesModel() const;
 
 signals:
     void nameChanged();
@@ -36,6 +43,8 @@ private:
     QString m_name;
     RoomModel *m_rooms;
     TeacherModel *m_teachers;
+    LessonModel *m_lessons;
+    ClassModel  *m_classes;
 };
 
 #endif // SCHOOL_H

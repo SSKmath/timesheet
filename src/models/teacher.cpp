@@ -1,8 +1,31 @@
 #include "teacher.h"
 
-Teacher::Teacher(QObject *parent) : QObject(parent), m_workingDays(6, false) {}
+Teacher::Teacher(QObject *parent)
+    : QObject(parent),
+    m_workingDays(6, false)
+{
+}
 
-Teacher::Teacher(const QString &surname, const QString &name, const QString &patronymic, const QString &subject, QObject *parent) : QObject(parent), m_surname(surname), m_name(name), m_patronymic(patronymic), m_subject(subject), m_workingDays(6, false) {}
+Teacher::Teacher(int id,
+                 const QString &surname,
+                 const QString &name,
+                 const QString &patronymic,
+                 const QString &subject,
+                 QObject *parent)
+    : QObject(parent),
+    m_id(id),
+    m_surname(surname),
+    m_name(name),
+    m_patronymic(patronymic),
+    m_subject(subject),
+    m_workingDays(6, false)
+{
+}
+
+int Teacher::id() const
+{
+    return m_id;
+}
 
 QString Teacher::surname() const
 {
@@ -92,5 +115,3 @@ void Teacher::setWorksOnDay(int index, bool v)
     m_workingDays[index] = v;
     emit workingDaysChanged();
 }
-
-

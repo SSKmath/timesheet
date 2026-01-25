@@ -4,6 +4,9 @@
 #include <QObject>
 #include <QVariantMap>
 #include <QVariantList>
+#include <QString>
+#include <QByteArray>
+#include <QList>
 
 class School;
 
