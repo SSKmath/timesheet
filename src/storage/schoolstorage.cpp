@@ -120,6 +120,7 @@ bool SchoolStorage::saveSchool(const QVariantMap &schoolData)
         lo["name"]      = lmap.value("name").toString();
         lo["isDouble"]  = lmap.value("isDouble").toBool();
         lo["teacherId"] = lmap.value("teacherId").toInt();
+        lo["perWeek"]   = lmap.value("perWeek").toInt();
 
         QJsonArray classesArr;
         QVariantList classesList = lmap.value("classes").toList();
@@ -210,6 +211,7 @@ bool SchoolStorage::saveSchool(School *school)
             l["name"]      = lm->data(ind, LessonModel::NameRole).toString();
             l["isDouble"]  = lm->data(ind, LessonModel::IsDoubleRole).toBool();
             l["teacherId"] = lm->data(ind, LessonModel::TeacherIdRole).toInt();
+            l["perWeek"]   = lm->data(ind, LessonModel::PerWeekRole).toInt();
 
             QVariantList classesVar = lm->data(ind, LessonModel::ClassesRole).toList();
             QVariantList classesJson;
@@ -302,6 +304,7 @@ QVariantMap SchoolStorage::loadSchool(const QString &id) const
         lm["name"]      = lo.value("name").toString();
         lm["isDouble"]  = lo.value("isDouble").toBool();
         lm["teacherId"] = lo.value("teacherId").toInt();
+        lm["perWeek"] = lo.value("perWeek").toInt();
 
         QVariantList classes;
         QJsonArray ca = lo.value("classes").toArray();
@@ -395,6 +398,7 @@ QList<QVariantMap> SchoolStorage::loadAllSchools() const
             lm["name"]      = lo.value("name").toString();
             lm["isDouble"]  = lo.value("isDouble").toBool();
             lm["teacherId"] = lo.value("teacherId").toInt();
+            lm["perWeek"] = lo.value("perWeek").toInt();
 
             QVariantList classes;
             QJsonArray ca = lo.value("classes").toArray();

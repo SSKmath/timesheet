@@ -13,6 +13,7 @@ class Lesson : public QObject
     Q_PROPERTY(bool isDouble READ isDouble WRITE setIsDouble NOTIFY isDoubleChanged)
     Q_PROPERTY(int teacherId READ teacherId WRITE setTeacherId NOTIFY teacherIdChanged)
     Q_PROPERTY(QList<int> classes READ classes WRITE setClasses NOTIFY classesChanged)
+    Q_PROPERTY(int perWeek READ perWeek WRITE setPerWeek NOTIFY perWeekChanged)
 
 public:
     explicit Lesson(QObject *parent = nullptr);
@@ -20,6 +21,7 @@ public:
            const QString &name,
            bool isDouble,
            int teacherId,
+           int perWeek,
            const QList<int> &classes,
            QObject *parent = nullptr);
 
@@ -38,12 +40,16 @@ public:
     QList<int> classes() const;
     void setClasses(const QList<int> &c);
 
+    int perWeek() const;
+    void setPerWeek(int v);
+
 signals:
     void idChanged();
     void nameChanged();
     void isDoubleChanged();
     void teacherIdChanged();
     void classesChanged();
+    void perWeekChanged();
 
 private:
     int m_id;
@@ -51,6 +57,7 @@ private:
     bool m_isDouble;
     int m_teacherId;
     QList<int> m_classes;
+    int m_perWeek;
 };
 
 #endif // LESSON_H

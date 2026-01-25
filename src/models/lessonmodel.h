@@ -16,6 +16,7 @@ public:
         NameRole,
         IsDoubleRole,
         TeacherIdRole,
+        PerWeekRole,
         ClassesRole
     };
 
@@ -30,12 +31,14 @@ public:
     Q_INVOKABLE void appendLesson(const QString &name,
                                   bool isDouble,
                                   int teacherId,
+                                  int perWeek,
                                   const QList<int> &classes);
 
     void appendLessonWithId(int id,
                             const QString &name,
                             bool isDouble,
                             int teacherId,
+                            int perWeek,
                             const QList<int> &classes);
 
     Q_INVOKABLE void removeAt(int index);

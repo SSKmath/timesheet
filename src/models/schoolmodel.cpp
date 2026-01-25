@@ -87,6 +87,7 @@ SchoolModel::SchoolModel(QObject *parent) : QAbstractListModel(parent)
             QString name  = l.value("name").toString();
             bool isDouble = l.value("isDouble").toBool();
             int teacherId = l.value("teacherId").toInt();
+            int perWeek   = l.value("perWeek", 1).toInt();
 
             QVariantList classesVar = l.value("classes").toList();
             QList<int> classes;
@@ -104,9 +105,9 @@ SchoolModel::SchoolModel(QObject *parent) : QAbstractListModel(parent)
             }
 
             if (lid > 0)
-                lm->appendLessonWithId(lid, name, isDouble, teacherId, classes);
+                lm->appendLessonWithId(lid, name, isDouble, teacherId, perWeek, classes);
             else
-                lm->appendLesson(name, isDouble, teacherId, classes);
+                lm->appendLesson(name, isDouble, teacherId, perWeek, classes);
         }
 
         m_schools.append(s);
@@ -313,6 +314,7 @@ QVariantMap SchoolModel::get(int index) const
             l["name"]      = lm->data(ind, LessonModel::NameRole).toString();
             l["isDouble"]  = lm->data(ind, LessonModel::IsDoubleRole).toBool();
             l["teacherId"] = lm->data(ind, LessonModel::TeacherIdRole).toInt();
+            l["perWeek"]   = lm->data(ind, LessonModel::PerWeekRole).toInt();
 
             QVariantList classesVar = lm->data(ind, LessonModel::ClassesRole).toList();
             QVariantList classesJson;
