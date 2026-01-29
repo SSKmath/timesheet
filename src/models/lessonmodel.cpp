@@ -98,10 +98,7 @@ QHash<int, QByteArray> LessonModel::roleNames() const
     return roles;
 }
 
-void LessonModel::appendLesson(const QString &name,
-                               bool isDouble,
-                               int teacherId,
-                               const QList<int> &classes)
+void LessonModel::appendLesson(const QString &name, bool isDouble, int teacherId, const QList<int> &classes)
 {
     if (name.trimmed().isEmpty() || teacherId <= 0)
         return;

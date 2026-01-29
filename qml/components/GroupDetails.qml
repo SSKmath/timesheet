@@ -10,186 +10,188 @@ Page {
     readonly property var lessonModel: appState.lessonModel
 
     header: ToolBar {
-        ToolButton {
-            text: "Назад"
-            onClicked: {
-                showPageRequested(2)
-                console.log("Нажата кнопка назад")
+        RowLayout {
+            anchors.fill: parent
+            anchors.margins: 6
+            spacing: 8
+
+            ToolButton {
+                text: "Назад"
+                onClicked: {
+                    showPageRequested(2)
+                    console.log("Нажата кнопка назад")
+                }
             }
+
+            Item { Layout.fillWidth: true }
         }
     }
 
     ColumnLayout {
         anchors.fill: parent
-        //spacing: 10
+        anchors.margins: 12
+        spacing: 12
 
         RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
             Label {
-                //anchors.margins: 8
                 text: schoolclassModel === null ? "error" : schoolclassModel.name
                 font.bold: true
+                Layout.alignment: Qt.AlignVCenter
             }
 
-            Item { // Костыль
-                Layout.fillWidth: true
-            }
+            Item { Layout.fillWidth: true }
 
             Label {
-                //anchors.margins: 8
                 text: "Классный руководитель"
                 font.bold: true
+                Layout.alignment: Qt.AlignVCenter
             }
 
-            TextField{
+            TextField {
                 id: nameClassTeacher
-                //text:
                 placeholderText: "Имя преподавателя"
-                //Layout.fillWidth: true
+                Layout.preferredWidth: 260
+                Layout.alignment: Qt.AlignVCenter
             }
         }
 
         Label {
-            //anchors.margins: 8
             text: "Предметы"
             font.bold: true
         }
 
-        ColumnLayout {
+        ScrollView {
             Layout.fillWidth: true
-            Layout.preferredWidth: 1
             Layout.fillHeight: true
-            Layout.alignment: Qt.AlignTop
-            anchors.margins: 8
+            clip: true
 
-            ScrollView {
-                Layout.fillWidth: true
+            ListView {
+                id: subjectListView
+                width: parent.width
+                model: lessonModel
+                clip: true
+                spacing: 8
 
-                ListView {
-                    id: subjectListView
-                    width: parent.width
-                    model: lessonModel
-                    delegate: Rectangle {
-                        width: subjectListView.width
-                        height: 48
-                        color: "transparent"
-                        RowLayout {
-                            anchors.fill: parent
-                            anchors.margins: 4
-                            spacing: 8
+                delegate: Rectangle {
+                    width: subjectListView.width
+                    height: 56
+                    color: "transparent"
 
-                            TextField {
-                                id: subjectEditor
-                                //text: subject
-                                text: "text"
-                                placeholderText: "Название предмета"
-                                Layout.fillWidth: true
-                                onEditingFinished: {
-                                    //var ind = roomsListView.model.index(index, 0)
-                                    //roomsListView.model.setData(ind, text, 1)
-                                    //console.log("Изменено имя:", text)
-                                }
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: 8
+                        spacing: 8
+
+                        TextField {
+                            id: subjectEditor
+                            text: name
+                            placeholderText: "Название предмета"
+                            Layout.fillWidth: true
+                            onEditingFinished: {
+                                // оставлено без изменений (логика редактирования будет добавлена позже)
                             }
+                        }
 
-                            TextField {
-                                id: nameEditor
-                                text: name
-                                placeholderText: "Имя преподавателя"
-                                Layout.fillWidth: true
-                                onEditingFinished: {
-                                    //var ind = roomsListView.model.index(index, 0)
-                                    //roomsListView.model.setData(ind, text, 1)
-                                    //console.log("Изменено имя:", text)
-                                }
+                        Label {
+                            text: "Количество уроков неделю"
+                            Layout.alignment: Qt.AlignVCenter
+                        }
+
+                        Button {
+                            text: "-"
+                            Layout.preferredWidth: 34
+                            Layout.preferredHeight: 34
+                            onClicked: {
+                                subjectCount--;
                             }
+                        }
 
-                            Label {
-                                text: "Количество уроков неделю"
+                        Label {
+                            text: "4"
+                            Layout.preferredWidth: 26
+                            horizontalAlignment: Text.AlignHCenter
+                            Layout.alignment: Qt.AlignVCenter
+                        }
+
+                        Button {
+                            text: "+"
+                            Layout.preferredWidth: 34
+                            Layout.preferredHeight: 34
+                            onClicked: {
+                                subjectCount++;
                             }
+                        }
 
-                            Button {
-                                text: "-"
-                                onClicked: {
-                                    subjectCount--;
-                                }
+                        ComboBox {
+                            id: teacherCombo
+                            model: ["Шелест О. В.", " Учитель 2"]
+                            currentIndex: size === "Учетель 1" ? 1 : 0
+                            Layout.preferredWidth: 170
+                            Layout.alignment: Qt.AlignVCenter
+                            onCurrentTextChanged: {
+                                // оставлено без изменений (логика будет добавлена позже)
                             }
+                        }
 
-                            Label {
-                                text: subjectCount
+                        ComboBox {
+                            id: pairCombo
+                            model: ["Парный", "Одинарный"]
+                            currentIndex: size === "Парный" ? 1 : 0
+                            Layout.preferredWidth: 140
+                            Layout.alignment: Qt.AlignVCenter
+                            onCurrentTextChanged: {
+                                // оставлено без изменений (логика будет добавлена позже)
                             }
+                        }
 
-                            Button {
-                                text: "+"
-                                onClicked: {
-                                    subjectCount++;
-                                }
-                            }
-
-
-
-                            ComboBox {
-                                id: teacherCombo
-                                model: ["Учитель 1", " Учитель 2"]
-                                currentIndex: size === "Учетель 1" ? 1 : 0
-                                onCurrentTextChanged: {
-                                    //var idx = roomsListView.model.index(index, 0)
-                                    //roomsListView.model.setData(idx, currentText, 2)
-                                    //console.log("Изменена парность", name, "->", currentText)
-                                }
-                            }
-
-                            ComboBox {
-                                id: pairCombo
-                                model: ["Парный", "Одинарный"]
-                                currentIndex: size === "Парный" ? 1 : 0
-                                onCurrentTextChanged: {
-                                    //var idx = roomsListView.model.index(index, 0)
-                                    //roomsListView.model.setData(idx, currentText, 2)
-                                    //console.log("Изменена парность", name, "->", currentText)
-                                }
-                            }
-
-                            Button {
-                                icon.source: "trash.png"
-                                display: AbstractButton.TextBesideIcon
-                                onClicked: {
-                                    roomModel.removeAt(index)
-                                    console.log("Удаляем кабинет:", name)
-                                }
+                        Button {
+                            icon.source: "trash.png"
+                            display: AbstractButton.TextBesideIcon
+                            Layout.preferredWidth: 44
+                            Layout.preferredHeight: 34
+                            onClicked: {
+                                lessonModel.removeAt(index)
+                                console.log("Удаляем урок:", name)
                             }
                         }
                     }
                 }
             }
+        }
 
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
 
-        //Item { // Костыль, Label и Button у левой и правой границы соответственно
-            //Layout.fillWidth: true
-        //}
-
-                            /*Button {
-                                text: "Удалить"
-                                onClicked: {
-                                    //roomModel.removeAt(index)
-                                    console.log("Удаляем предмет:", name)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            Item { // Костыль, Button снизу
-                Layout.fillHeight: true
-            }
-
-            RowLayout {
+            TextField {
+                id: subjectAdd
+                placeholderText: "Название предмета"
                 Layout.fillWidth: true
-                Layout.alignment: Qt.AlignHCenter
-                Button {
-                    text: "Добавить"
+            }
+
+            ComboBox {
+                id: teacherComboAdd
+                model: ["Шелест О. В.", " Учитель 2"]
+                currentIndex: size === "Учетель 1" ? 1 : 0
+                Layout.preferredWidth: 170
+            }
+
+            ComboBox {
+                id: pairComboAdd
+                model: ["Парный", "Одинарный"]
+                currentIndex: size === "Парный" ? 1 : 0
+                Layout.preferredWidth: 140
+            }
+
+            Button {
+                text: "Добавить"
+                onClicked: {
+                    lessonModel.appendLesson(subjectAdd.text, false, 1, [])
                 }
             }
-            */
         }
     }
 }
