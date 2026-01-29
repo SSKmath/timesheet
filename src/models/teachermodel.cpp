@@ -151,3 +151,13 @@ QObject* TeacherModel::teacherAt(int index) const
         return nullptr;
     return m_teachers.at(index);
 }
+
+QObject* TeacherModel::teachetById(int id) const
+{
+    for (Teacher *tp : m_teachers)
+    {
+        if (tp->id() == id)
+            return tp;
+    }
+    // потом написать, что будет, если не нашёлся учитель
+}

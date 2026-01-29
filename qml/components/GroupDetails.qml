@@ -8,6 +8,8 @@ Page {
 
     readonly property var schoolclassModel: appState.schoolclassModel
     readonly property var lessonModel: appState.lessonModel
+    readonly property var teacherModel: appState.teacherModel
+    property int currentChoiseTeacher: -1
 
     header: ToolBar {
         RowLayout {
@@ -91,7 +93,8 @@ Page {
                             placeholderText: "Название предмета"
                             Layout.fillWidth: true
                             onEditingFinished: {
-                                // оставлено без изменений (логика редактирования будет добавлена позже)
+                                var ind = subjectListView.model.index(index, 0)
+                                lessonModel.setData(ind, text, 2)
                             }
                         }
 
@@ -104,13 +107,15 @@ Page {
                             text: "-"
                             Layout.preferredWidth: 34
                             Layout.preferredHeight: 34
+                            enabled: perWeek > 1
                             onClicked: {
-                                subjectCount--;
+                                var ind = subjectListView.model.index(index, 0)
+                                lessonModel.setData(ind, perWeek - 1, 5) // Всё ещё не понимаю, как работают роли
                             }
                         }
 
                         Label {
-                            text: "4"
+                            text: perWeek
                             Layout.preferredWidth: 26
                             horizontalAlignment: Text.AlignHCenter
                             Layout.alignment: Qt.AlignVCenter
@@ -120,30 +125,42 @@ Page {
                             text: "+"
                             Layout.preferredWidth: 34
                             Layout.preferredHeight: 34
+                            enabled: perWeek < 99
                             onClicked: {
-                                subjectCount++;
+                                var ind = subjectListView.model.index(index, 0)
+                                lessonModel.setData(ind, perWeek + 1, 5) // Всё ещё не понимаю, как работают роли
                             }
                         }
 
                         ComboBox {
                             id: teacherCombo
-                            model: ["Шелест О. В.", " Учитель 2"]
-                            currentIndex: size === "Учетель 1" ? 1 : 0
+                            model: teacherModel
                             Layout.preferredWidth: 170
-                            Layout.alignment: Qt.AlignVCenter
-                            onCurrentTextChanged: {
-                                // оставлено без изменений (логика будет добавлена позже)
+
+                            displayText: {
+                                var teacher = teacherModel.teachetById(teacherId);
+                                return teacher ? teacher.surname + " " + teacher.name[0] + " " + teacher.patronymic[0]: "Не выбран";
                             }
+
+                            delegate: ItemDelegate {
+                                width: teacherComboAdd.width
+                                text: model.surname + " " + (model.name ? model.name[0] : "") + " " + (model.patronymic ? model.patronymic[0] : "0")
+                                onClicked: {
+                                    // Дописать обновления учителя
+                                }
+                            }
+
                         }
 
                         ComboBox {
                             id: pairCombo
                             model: ["Парный", "Одинарный"]
-                            currentIndex: size === "Парный" ? 1 : 0
+                            currentIndex: isDouble ? 0 : 1
                             Layout.preferredWidth: 140
                             Layout.alignment: Qt.AlignVCenter
                             onCurrentTextChanged: {
-                                // оставлено без изменений (логика будет добавлена позже)
+                                var ind = subjectListView.model.index(index, 0)
+                                lessonModel.setData(ind, pairCombo.currentText === "Парный", 3)
                             }
                         }
 
@@ -174,22 +191,37 @@ Page {
 
             ComboBox {
                 id: teacherComboAdd
-                model: ["Шелест О. В.", " Учитель 2"]
-                currentIndex: size === "Учетель 1" ? 1 : 0
+                model: teacherModel
                 Layout.preferredWidth: 170
+
+                displayText: {
+                    if (currentChoiseTeacher !== -1) {
+                        var teacher = model.teacherAt(currentIndex)
+                        return teacher.surname + " " + (teacher.name ? teacher.name[0] + "." : "") +(teacher.patronymic ? " " + teacher.patronymic[0] + "." : "")
+                    }
+                    return "Выберите преподавателя" // почему-то это никогда не выводится
+                }
+
+                delegate: ItemDelegate {
+                    width: teacherComboAdd.width
+                    text: model.surname + " " + (model.name ? model.name[0] : "") + " " + (model.patronymic ? model.patronymic[0] : "0")
+                    onClicked: {
+                        currentChoiseTeacher = model.id
+                    }
+                }
             }
 
             ComboBox {
                 id: pairComboAdd
                 model: ["Парный", "Одинарный"]
-                currentIndex: size === "Парный" ? 1 : 0
                 Layout.preferredWidth: 140
             }
 
             Button {
                 text: "Добавить"
+                enabled: currentChoiseTeacher !== -1 && subjectAdd.text !== ""
                 onClicked: {
-                    lessonModel.appendLesson(subjectAdd.text, false, 1, [])
+                    lessonModel.appendLesson(subjectAdd.text, pairComboAdd.currentText === "Парный", currentChoiseTeacher, 1, [])
                 }
             }
         }

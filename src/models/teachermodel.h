@@ -39,6 +39,7 @@ public:
     Q_INVOKABLE void removeAt(int index);
     Q_INVOKABLE int count() const;
     Q_INVOKABLE QObject *teacherAt(int index) const;
+    Q_INVOKABLE QObject *teachetById(int id) const;
 
     void appendTeacherWithId(int id,
                              const QString &surname,

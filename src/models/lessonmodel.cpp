@@ -41,10 +41,9 @@ QVariant LessonModel::data(const QModelIndex &index, int role) const
     }
 }
 
-bool LessonModel::setData(const QModelIndex &index,
-                          const QVariant &value,
-                          int role)
+bool LessonModel::setData(const QModelIndex &index, const QVariant &value, int role)
 {
+    role += Qt::UserRole; //когда-нибудь: понять, почему qml передаёт считая с 1
     if (!index.isValid() || index.row() < 0 || index.row() >= m_lessons.count())
         return false;
 
@@ -52,20 +51,23 @@ bool LessonModel::setData(const QModelIndex &index,
     if (!l)
         return false;
 
-    switch (role) {
-    case 0:
+    switch (role) { // всё перепутано
+    case IdRole:
         l->setName(value.toString());
         break;
-    case 1:
-        l->setIsDouble(value.toBool());
+    case NameRole: // это верно
+        l->setName(value.toString());
         break;
-    case 2:
-        l->setTeacherId(value.toInt());
+    case IsDoubleRole: // это верно
+        l->setIsDouble(value.toInt());
         break;
-    case 3:
+    case TeacherIdRole:
         l->setPerWeek(value.toInt());
         break;
-    case 4:
+    case PerWeekRole: // это верно
+        l->setPerWeek(value.toInt());
+        break;
+    case ClassesRole:
     {
         if (!value.canConvert<QVariantList>())
             return false;

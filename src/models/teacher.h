@@ -8,6 +8,7 @@
 class Teacher : public QObject
 {
     Q_OBJECT
+    Q_PROPERTY(int id READ id FINAL)
     Q_PROPERTY(QString surname READ surname WRITE setSurname NOTIFY surnameChanged)
     Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
     Q_PROPERTY(QString patronymic READ patronymic WRITE setPatronymic NOTIFY patronymicChanged)
