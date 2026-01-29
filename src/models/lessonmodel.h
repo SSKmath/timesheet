@@ -16,6 +16,7 @@ public:
         NameRole,
         IsDoubleRole,
         TeacherIdRole,
+        PerWeekRole,
         ClassesRole
     };
 
@@ -27,12 +28,13 @@ public:
                  int role = Qt::EditRole) override;
     QHash<int, QByteArray> roleNames() const override;
 
-    Q_INVOKABLE void appendLesson(const QString &name, bool isDouble, int teacherId, const QList<int> &classes);
+    Q_INVOKABLE void appendLesson(const QString &name, bool isDouble, int teacherId, int perWeek, const QList<int> &classes);
 
     void appendLessonWithId(int id,
                             const QString &name,
                             bool isDouble,
                             int teacherId,
+                            int perWeek,
                             const QList<int> &classes);
 
     Q_INVOKABLE void removeAt(int index);

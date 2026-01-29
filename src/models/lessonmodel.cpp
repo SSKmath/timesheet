@@ -28,6 +28,7 @@ QVariant LessonModel::data(const QModelIndex &index, int role) const
     case NameRole:      return l->name();
     case IsDoubleRole:  return l->isDouble();
     case TeacherIdRole: return l->teacherId();
+    case PerWeekRole:   return l->perWeek();
     case ClassesRole:
     {
         QVariantList cls;
@@ -62,6 +63,9 @@ bool LessonModel::setData(const QModelIndex &index,
         l->setTeacherId(value.toInt());
         break;
     case 3:
+        l->setPerWeek(value.toInt());
+        break;
+    case 4:
     {
         if (!value.canConvert<QVariantList>())
             return false;
@@ -94,24 +98,21 @@ QHash<int, QByteArray> LessonModel::roleNames() const
     roles[NameRole]      = "name";
     roles[IsDoubleRole]  = "isDouble";
     roles[TeacherIdRole] = "teacherId";
+    roles[PerWeekRole]   = "perWeek";
     roles[ClassesRole]   = "classes";
     return roles;
 }
 
-void LessonModel::appendLesson(const QString &name, bool isDouble, int teacherId, const QList<int> &classes)
+void LessonModel::appendLesson(const QString &name, bool isDouble, int teacherId, int perWeek, const QList<int> &classes)
 {
     if (name.trimmed().isEmpty() || teacherId <= 0)
         return;
 
     int id = m_nextId++;
-    appendLessonWithId(id, name, isDouble, teacherId, classes);
+    appendLessonWithId(id, name, isDouble, teacherId, perWeek, classes);
 }
 
-void LessonModel::appendLessonWithId(int id,
-                                     const QString &name,
-                                     bool isDouble,
-                                     int teacherId,
-                                     const QList<int> &classes)
+void LessonModel::appendLessonWithId(int id, const QString &name, bool isDouble, int teacherId, int perWeek, const QList<int> &classes)
 {
     if (name.trimmed().isEmpty() || teacherId <= 0)
         return;
@@ -119,7 +120,7 @@ void LessonModel::appendLessonWithId(int id,
     const int row = m_lessons.count();
     beginInsertRows(QModelIndex(), row, row);
 
-    Lesson *l = new Lesson(id, name, isDouble, teacherId, classes, this);
+    Lesson *l = new Lesson(id, name, isDouble, teacherId, perWeek, classes, this);
     m_lessons.append(l);
 
     endInsertRows();

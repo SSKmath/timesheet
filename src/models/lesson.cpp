@@ -4,7 +4,8 @@ Lesson::Lesson(QObject *parent)
     : QObject(parent),
     m_id(-1),
     m_isDouble(false),
-    m_teacherId(-1)
+    m_teacherId(-1),
+    m_perWeek(1)
 {
 }
 
@@ -12,6 +13,7 @@ Lesson::Lesson(int id,
                const QString &name,
                bool isDouble,
                int teacherId,
+               int perWeek,
                const QList<int> &classes,
                QObject *parent)
     : QObject(parent),
@@ -19,7 +21,9 @@ Lesson::Lesson(int id,
     m_name(name),
     m_isDouble(isDouble),
     m_teacherId(teacherId),
+    m_perWeek(perWeek),
     m_classes(classes)
+
 {
 }
 
@@ -86,4 +90,17 @@ void Lesson::setClasses(const QList<int> &c)
         return;
     m_classes = c;
     emit classesChanged();
+}
+
+int Lesson::perWeek() const
+{
+    return m_perWeek;
+}
+
+void Lesson::setPerWeek(int v)
+{
+    if (m_perWeek == v)
+        return;
+    m_perWeek = v;
+    emit perWeekChanged();
 }
