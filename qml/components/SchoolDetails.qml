@@ -183,7 +183,7 @@ Page {
                             spacing: 8
 
                             Label {
-                                text: surname + " " + name.charAt(0) + ". " + patronymic.charAt(0) + "."
+                                text: surname + " " + name[0] + ". " + patronymic[0] + "."
 
                                 MouseArea {
                                     anchors.fill: parent

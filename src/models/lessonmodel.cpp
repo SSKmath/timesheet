@@ -61,8 +61,8 @@ bool LessonModel::setData(const QModelIndex &index, const QVariant &value, int r
     case IsDoubleRole: // это верно
         l->setIsDouble(value.toInt());
         break;
-    case TeacherIdRole:
-        l->setPerWeek(value.toInt());
+    case TeacherIdRole: // это верно
+        l->setTeacherId(value.toInt());
         break;
     case PerWeekRole: // это верно
         l->setPerWeek(value.toInt());

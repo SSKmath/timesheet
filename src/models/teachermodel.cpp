@@ -12,6 +12,8 @@ int TeacherModel::rowCount(const QModelIndex &parent) const
 
 QVariant TeacherModel::data(const QModelIndex &index, int role) const
 {
+   // role += Qt::UserRole; // костыль
+
     if (!index.isValid() || index.row() < 0 || index.row() >= m_teachers.count())
         return QVariant();
     Teacher *t = m_teachers.at(index.row());
@@ -152,7 +154,7 @@ QObject* TeacherModel::teacherAt(int index) const
     return m_teachers.at(index);
 }
 
-QObject* TeacherModel::teachetById(int id) const
+QObject* TeacherModel::teacherById(int id) const
 {
     for (Teacher *tp : m_teachers)
     {
@@ -160,4 +162,14 @@ QObject* TeacherModel::teachetById(int id) const
             return tp;
     }
     // потом написать, что будет, если не нашёлся учитель
+}
+
+int TeacherModel::indexById(int id) const
+{
+    for (int row = 0; row < m_teachers.size(); ++row)
+    {
+        if (data(index(row, 0), Qt::UserRole + 1).toInt() == id)
+            return row;
+    }
+    return -1;
 }

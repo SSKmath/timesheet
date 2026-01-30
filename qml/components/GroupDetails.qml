@@ -137,19 +137,27 @@ Page {
                             model: teacherModel
                             Layout.preferredWidth: 170
 
+                            Component.onCompleted: {
+                                currentIndex = teacherModel.indexById(teacherId)
+                            }
+
                             displayText: {
-                                var teacher = teacherModel.teachetById(teacherId);
-                                return teacher ? teacher.surname + " " + teacher.name[0] + " " + teacher.patronymic[0]: "Не выбран";
+                                var teacher = teacherModel.teacherById(teacherId)
+                                return teacher ? teacher.surname + " " + teacher.name[0] + ". " + teacher.patronymic[0] + "." : "Не выбран"
                             }
 
                             delegate: ItemDelegate {
-                                width: teacherComboAdd.width
-                                text: model.surname + " " + (model.name ? model.name[0] : "") + " " + (model.patronymic ? model.patronymic[0] : "0")
-                                onClicked: {
-                                    // Дописать обновления учителя
-                                }
+                                width: teacherCombo.width
+                                text: model.surname + " " + (model.name ? model.name[0] + "." : "") + " " + (model.patronymic ? model.patronymic[0] + "." : "")
                             }
 
+                            onActivated: function(comboIndex) {
+                                if (currentIndex >= 0) {
+                                    var selectedTeacherId = teacherModel.data(teacherModel.index(currentIndex, 0), 257)
+                                    var lessonIndex = subjectListView.model.index(index, 0)
+                                    lessonModel.setData(lessonIndex, selectedTeacherId, 4)
+                                }
+                            }
                         }
 
                         ComboBox {
