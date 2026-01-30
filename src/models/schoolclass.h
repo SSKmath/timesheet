@@ -7,6 +7,7 @@
 class SchoolClass : public QObject
 {
     Q_OBJECT
+    Q_PROPERTY(int id READ id NOTIFY idChanged)
     Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
 
 public:
@@ -18,6 +19,7 @@ public:
     void setName(const QString &name);
 
 signals:
+    void idChanged();
     void nameChanged();
 
 private:

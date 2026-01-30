@@ -9,6 +9,7 @@ Page {
     readonly property var schoolclassModel: appState.schoolclassModel
     readonly property var lessonModel: appState.lessonModel
     readonly property var teacherModel: appState.teacherModel
+    readonly property var classModel: appState.classModel
     property int currentChoiseTeacher: -1
 
     header: ToolBar {
@@ -79,8 +80,9 @@ Page {
 
                 delegate: Rectangle {
                     width: subjectListView.width
-                    height: 56
+                    height: visible ? 56 : 0
                     color: "transparent"
+                    visible: classes.includes(schoolclassModel.id)
 
                     RowLayout {
                         anchors.fill: parent
@@ -229,7 +231,9 @@ Page {
                 text: "Добавить"
                 enabled: currentChoiseTeacher !== -1 && subjectAdd.text !== ""
                 onClicked: {
-                    lessonModel.appendLesson(subjectAdd.text, pairComboAdd.currentText === "Парный", currentChoiseTeacher, 1, [])
+                    lessonModel.appendLesson(subjectAdd.text, pairComboAdd.currentText === "Парный", currentChoiseTeacher, 1, [schoolclassModel.id])
+                    subjectAdd.text = ""
+                    currentChoiseTeacher = -1
                 }
             }
         }
