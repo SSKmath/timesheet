@@ -1,6 +1,7 @@
 #include "teachermodel.h"
+#include <utility>
 
-TeacherModel::TeacherModel(QObject *parent) : QAbstractListModel(parent)  {}
+TeacherModel::TeacherModel(QObject *parent) : QAbstractListModel(parent), m_nextId(1)  {}
 
 int TeacherModel::rowCount(const QModelIndex &parent) const
 {
@@ -11,11 +12,14 @@ int TeacherModel::rowCount(const QModelIndex &parent) const
 
 QVariant TeacherModel::data(const QModelIndex &index, int role) const
 {
+   // role += Qt::UserRole; // костыль
+
     if (!index.isValid() || index.row() < 0 || index.row() >= m_teachers.count())
         return QVariant();
     Teacher *t = m_teachers.at(index.row());
 
     switch (role) {
+    case IdRole:         return t->id();
     case SurnameRole:    return t->surname();
     case NameRole:       return t->name();
     case PatronymicRole: return t->patronymic();
@@ -76,6 +80,7 @@ bool TeacherModel::setData(const QModelIndex &index, const QVariant &value, int 
 QHash<int, QByteArray> TeacherModel::roleNames() const
 {
     QHash<int, QByteArray> roles;
+    roles[IdRole]          = "id";
     roles[SurnameRole]     = "surname";
     roles[NameRole]        = "name";
     roles[PatronymicRole]  = "patronymic";
@@ -94,14 +99,33 @@ void TeacherModel::appendTeacher(const QString &surname,
         subject.isEmpty() || workingDays.size() != 6)
         return;
 
+    int id = m_nextId++;
+    appendTeacherWithId(id, surname, name, patronymic, subject, workingDays);
+}
+
+void TeacherModel::appendTeacherWithId(int id,
+                                       const QString &surname,
+                                       const QString &name,
+                                       const QString &patronymic,
+                                       const QString &subject,
+                                       const QList<bool> &workingDays)
+{
+    if (surname.isEmpty() || name.isEmpty() || patronymic.isEmpty() ||
+        subject.isEmpty() || workingDays.size() != 6)
+        return;
+
     const int ind = m_teachers.count();
     beginInsertRows(QModelIndex(), ind, ind);
 
-    Teacher *t = new Teacher(surname, name, patronymic, subject, this);
+    Teacher *t = new Teacher(id, surname, name, patronymic, subject, this);
     t->setWorkingDays(workingDays);
 
     m_teachers.append(t);
     endInsertRows();
+
+    if (id >= m_nextId)
+        m_nextId = id + 1;
+
     emit dataModified();
 }
 
@@ -114,6 +138,7 @@ void TeacherModel::removeAt(int index)
     endRemoveRows();
     if (t)
         t->deleteLater();
+
     emit dataModified();
 }
 
@@ -127,4 +152,24 @@ QObject* TeacherModel::teacherAt(int index) const
     if (index < 0 || index >= m_teachers.size())
         return nullptr;
     return m_teachers.at(index);
+}
+
+QObject* TeacherModel::teacherById(int id) const
+{
+    for (Teacher *tp : m_teachers)
+    {
+        if (tp->id() == id)
+            return tp;
+    }
+    // потом написать, что будет, если не нашёлся учитель
+}
+
+int TeacherModel::indexById(int id) const
+{
+    for (int row = 0; row < m_teachers.size(); ++row)
+    {
+        if (data(index(row, 0), Qt::UserRole + 1).toInt() == id)
+            return row;
+    }
+    return -1;
 }

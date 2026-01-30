@@ -10,6 +10,8 @@ Page {
     property string schoolName: ""
     property var roomModel: null
     property var teacherModel: null
+    property var classModel: null
+    property var lessonModel: null
 
     onSchoolIdChanged: {
         if (schoolId >= 0) {
@@ -19,6 +21,10 @@ Page {
                 roomModel = schoolModel.roomModelAt(schoolId)
                 teacherModel = schoolModel.teacherModelAt(schoolId)
                 appState.teacherModel = teacherModel
+                classModel = schoolModel.classModelAt(schoolId)
+                appState.classModel = classModel
+                lessonModel = schoolModel.lessonModelAt(schoolId)
+                appState.lessonModel = lessonModel
                 console.log("Загружена школа:", schoolName, "с комнатами из C++ модели")
             }
         }
@@ -177,7 +183,7 @@ Page {
                             spacing: 8
 
                             Label {
-                                text: surname + " " + name.charAt(0) + ". " + patronymic.charAt(0) + "."
+                                text: surname + " " + name[0] + ". " + patronymic[0] + "."
 
                                 MouseArea {
                                     anchors.fill: parent
@@ -241,15 +247,11 @@ Page {
                 ListView {
                     id: klassListView
                     width: parent.width
-                    model: ListModel {
-                        ListElement { name: "10А" }
-                        ListElement { name: "10Б" }
-                    }
+                    model: classModel
                     delegate: Rectangle {
                         width: parent.width
                         height: 48
                         color: "transparent"
-
 
                         RowLayout {
                             anchors.fill: parent
@@ -257,12 +259,14 @@ Page {
                             spacing: 8
 
                             Label {
+                                id: nameClass
                                 text: name
 
                                 MouseArea {
                                     anchors.fill: parent
                                     onClicked: {
                                         showPageRequested(4)
+                                        appState.schoolclassModel = classModel.classAt(index)
                                         console.log("Показать информацию о классе");
                                     }
                                 }
@@ -275,7 +279,7 @@ Page {
                             Button {
                                 text: "Удалить"
                                 onClicked: {
-                                    //roomModel.removeAt(index)
+                                    classModel.removeAt(index)
                                     console.log("Удаляем класс:", name)
                                 }
                             }
@@ -290,9 +294,29 @@ Page {
 
             RowLayout {
                 Layout.fillWidth: true
+                spacing: 8
                 Layout.alignment: Qt.AlignHCenter
+
+                TextField {
+                    id: newClassName
+                    placeholderText: "Название класса"
+                    Layout.fillWidth: true
+                    onAccepted: addClass()
+                }
+
                 Button {
                     text: "Добавить"
+                    onClicked: {
+                        var name = newClassName.text.trim()
+                        if (name.length === 0) {
+                            console.log("Имя класса пустое - пропускаем")
+                            return
+                        }
+                        classModel.appendClass(name)
+                        newClassName.text = ""
+                        newClassName.forceActiveFocus()
+                        console.log("Добавлен класс:", name)
+                    }
                 }
             }
         }

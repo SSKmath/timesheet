@@ -15,7 +15,9 @@ public:
         IdRole = Qt::UserRole + 1,
         NameRole,
         RoomsModelRole,
-        TeachersModelRole
+        TeachersModelRole,
+        LessonsModelRole,
+        ClassesModelRole
     };
 
     explicit SchoolModel(QObject *parent = nullptr);
@@ -30,6 +32,8 @@ public:
     Q_INVOKABLE int count() const;
     Q_INVOKABLE QObject *roomModelAt(int index) const;
     Q_INVOKABLE QObject *teacherModelAt(int index) const;
+    Q_INVOKABLE QObject *lessonModelAt(int index) const;
+    Q_INVOKABLE QObject *classModelAt(int index) const;
 
 private:
     QList<School*> m_schools;
