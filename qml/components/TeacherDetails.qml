@@ -7,77 +7,10 @@ Page {
     id: teacherDetailsPage
     signal showPageRequested(int pageIndex)
 
-    // --- Поддержка внешнего appState (из контекста) или создание заглушки ---
-    property var actualAppState: (typeof appState !== 'undefined') ? appState : null
-
-    QtObject {
-        id: internal
-        property var appState: actualAppState ? actualAppState : dummyAppState
-    }
-
-    // Заглушка для работы без внешнего appState
-    QtObject {
-        id: dummyAppState
-        property ListModel teacherModel: ListModel {}
-        property int teacherIndex: 0
-        property bool teacherIsNew: false  // сразу покажем тестового учителя
-
-        function appendTeacher(surname, name, patronymic, mainSubject, additionalSubject, classLeadership, cabinet, workingDays) {
-            teacherModel.append({
-                surname: surname,
-                name: name,
-                patronymic: patronymic,
-                mainSubject: mainSubject,
-                additionalSubject: additionalSubject,
-                classLeadership: classLeadership,
-                cabinet: cabinet,
-                workingDays: workingDays
-            });
-        }
-
-        function teacherAt(index) {
-            if (index >= 0 && index < teacherModel.count)
-                return teacherModel.get(index);
-            return null;
-        }
-
-        function updateTeacher(index, surname, name, patronymic, mainSubject, additionalSubject, classLeadership, cabinet, workingDays) {
-            if (index >= 0 && index < teacherModel.count) {
-                var item = teacherModel.get(index);
-                item.surname = surname;
-                item.name = name;
-                item.patronymic = patronymic;
-                item.mainSubject = mainSubject;
-                item.additionalSubject = additionalSubject;
-                item.classLeadership = classLeadership;
-                item.cabinet = cabinet;
-                item.workingDays = workingDays;
-                teacherModel.set(index, item);
-            }
-        }
-    }
-
-    // Добавляем тестового учителя в заглушку
-    Component.onCompleted: {
-        if (!actualAppState) {
-            dummyAppState.teacherModel.append({
-                surname: "Иванов",
-                name: "Иван",
-                patronymic: "Иванович",
-                mainSubject: "Математика",
-                additionalSubject: "Физика",
-                classLeadership: "10А",
-                cabinet: "301",
-                workingDays: [false, true, true, true, false, false]
-            });
-            dummyAppState.teacherIndex = 0;
-        }
-    }
-
-    // Для удобства внутри кода используем internal.appState
-    readonly property var model: internal.appState.teacherModel
-    readonly property int tIndex: internal.appState.teacherIndex
-    readonly property bool isNew: internal.appState.teacherIsNew
+    // Используем внешний appState (должен быть определён в контексте)
+    readonly property var model: appState.teacherModel
+    readonly property int tIndex: appState.teacherIndex
+    readonly property bool isNew: appState.teacherIsNew
 
     // Модель дней недели
     ListModel {
@@ -171,7 +104,7 @@ Page {
                 }
             }
 
-            // Две колонки + отступ справа
+            // Две колонки + пустой отступ справа
             RowLayout {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
@@ -275,7 +208,7 @@ Page {
                         }
                     }
 
-                    // Кнопка "Добавить предмет" (на всю ширину)
+                    // Кнопка "Добавить предмет" (на всю ширину левой колонки)
                     Button {
                         text: "Добавить предмет"
                         Layout.fillWidth: true
@@ -363,7 +296,7 @@ Page {
         }
     }
 
-    // Нижние кнопки
+    // Нижние кнопки (занимают всю ширину, разделены поровну)
     RowLayout {
         id: buttonRow
         anchors.left: parent.left
@@ -372,6 +305,7 @@ Page {
         anchors.margins: 16
         spacing: 16
 
+        // Кнопка действия (Добавить / Сохранить)
         Button {
             id: actionButton
             text: isNew ? "Добавить" : "Сохранить изменения"
@@ -399,7 +333,8 @@ Page {
             onClicked: {
                 var data = collectFormData()
                 if (isNew) {
-                    internal.appState.appendTeacher(
+                    // Предполагается, что у модели есть метод appendTeacher со всеми полями
+                    model.appendTeacher(
                         data.surname,
                         data.name,
                         data.patronymic,
@@ -410,7 +345,8 @@ Page {
                         data.weekdays
                     );
                 } else {
-                    internal.appState.updateTeacher(
+                    // Предполагается, что у модели есть метод updateTeacher
+                    model.updateTeacher(
                         tIndex,
                         data.surname,
                         data.name,
@@ -426,6 +362,7 @@ Page {
             }
         }
 
+        // Кнопка "Отменить" (действует как "Назад")
         Button {
             text: "Отменить"
             Layout.fillWidth: true
@@ -456,10 +393,11 @@ Page {
         }
     }
 
-    // Загрузка данных при открытии
+    // Загрузка данных при открытии страницы
     onVisibleChanged: {
         if (visible) {
             if (isNew) {
+                // Очищаем поля для нового учителя
                 teacherSurName.text = ""
                 teacherName.text = ""
                 teacherPatronymic.text = ""
@@ -470,7 +408,8 @@ Page {
                 for (var i = 0; i < weekDays.count; ++i)
                     weekDays.setProperty(i, "checked", false)
             } else {
-                var teacherObj = internal.appState.teacherAt(tIndex)
+                // Загружаем данные существующего учителя
+                var teacherObj = model.teacherAt(tIndex)  // предполагается метод teacherAt
                 if (teacherObj) {
                     teacherSurName.text = teacherObj.surname || ""
                     teacherName.text = teacherObj.name || ""
@@ -488,7 +427,7 @@ Page {
         }
     }
 
-    // Сбор данных формы
+    // Сбор данных формы (все поля)
     function collectFormData() {
         var weekdaysArr = []
         for (var i = 0; i < weekDays.count; ++i)
