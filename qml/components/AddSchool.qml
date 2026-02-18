@@ -35,16 +35,26 @@ Page {
             id: schoolNameField
             placeholderText: "Название школы"
             Layout.fillWidth: true
+            background: Rectangle {
+                radius: height / 2
+                color: parent.focus ? "#e8f0fe" : "#f5f5f5"
+                border.color: "#1976D2"
+                border.width: 1.5
+            }
         }
 
         Label {
             text: "Кабинеты"
             font.bold: true
         }
-
         ScrollView {
             Layout.fillWidth: true
-            Layout.preferredHeight: 240
+            Layout.fillHeight: true
+            padding: 8
+            background: Rectangle {
+                color: "#f5f5f5"
+                radius: 8
+            }
 
             ListView {
                 id: roomsListView
@@ -64,6 +74,12 @@ Page {
                             text: name
                             placeholderText: "Название кабинета"
                             Layout.fillWidth: true
+                            background: Rectangle {
+                                radius: height / 2
+                                color: parent.focus ? "#e8f0fe" : "#f5f5f5"
+                                border.color: "#1976D2"
+                                border.width: 1.5
+                            }
                             onEditingFinished: {
                                 roomsModel.set(index, {"name": text, "size": roomsModel.get(index).size})
                                 console.log("Изменено имя:", text)
@@ -81,7 +97,7 @@ Page {
                         }
 
                         Button {
-                            text: "Удалить"
+                            text: "🞨"
                             onClicked: {
                                 console.log("Удаляем кабинет:", roomsModel.get(index).name)
                                 roomsModel.remove(index)
@@ -100,6 +116,12 @@ Page {
                 id: newRoomName
                 placeholderText: "Новое название кабинета"
                 Layout.fillWidth: true
+                background: Rectangle {
+                    radius: height / 2
+                    color: parent.focus ? "#e8f0fe" : "#f5f5f5"
+                    border.color: "#1976D2"
+                    border.width: 1.5
+                }
                 onAccepted: addRoom()
             }
 
@@ -112,16 +134,46 @@ Page {
 
             Button {
                 text: "Добавить"
+                background: Rectangle {
+                    color: {
+                        if (parent.pressed) return "#b0b0b0"
+                        if (parent.hovered) return "#c0c0c0"
+                        return "#e0e0e0"
+                    }
+                    border.color: parent.hovered ? "#999" : "#ccc"
+                    border.width: 1
+                }
                 onClicked: addRoom()
             }
         }
 
         RowLayout {
             Layout.fillWidth: true
-            spacing: 8
+            spacing: 16
+
             Button {
                 text: "Сохранить"
                 Layout.fillWidth: true
+                Layout.preferredWidth: 1
+                focusPolicy: Qt.NoFocus
+                flat: true
+
+                background: Rectangle {
+                    radius: height / 2
+                    color: "#1976D2"
+                    border.color: "#1976D2"
+                    border.width: 1
+                }
+
+                contentItem: Text {
+                    text: parent.text
+                    color: "white"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    font.pixelSize: 16
+                    font.bold: true
+                }
+
                 onClicked: {
                     var name = schoolNameField.text.trim()
                     if (name.length === 0) {
@@ -150,6 +202,26 @@ Page {
             Button {
                 text: "Отмена"
                 Layout.fillWidth: true
+                Layout.preferredWidth: 1
+                focusPolicy: Qt.NoFocus
+                flat: true
+
+                background: Rectangle {
+                    radius: height / 2
+                    color: "#f0f0f0"
+                    border.color: "#1976D2"
+                    border.width: 2
+                }
+
+                contentItem: Text {
+                    text: parent.text
+                    color: "#1976D2"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    font.pixelSize: 16
+                    font.bold: true
+                }
+
                 onClicked: {
                     schoolNameField.text = ""
                     roomsModel.clear()

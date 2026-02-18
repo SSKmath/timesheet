@@ -333,7 +333,6 @@ Page {
             onClicked: {
                 var data = collectFormData()
                 if (isNew) {
-                    // Предполагается, что у модели есть метод appendTeacher со всеми полями
                     model.appendTeacher(
                         data.surname,
                         data.name,
@@ -345,7 +344,6 @@ Page {
                         data.weekdays
                     );
                 } else {
-                    // Предполагается, что у модели есть метод updateTeacher
                     model.updateTeacher(
                         tIndex,
                         data.surname,
@@ -392,12 +390,9 @@ Page {
             }
         }
     }
-
-    // Загрузка данных при открытии страницы
     onVisibleChanged: {
         if (visible) {
             if (isNew) {
-                // Очищаем поля для нового учителя
                 teacherSurName.text = ""
                 teacherName.text = ""
                 teacherPatronymic.text = ""
@@ -408,8 +403,7 @@ Page {
                 for (var i = 0; i < weekDays.count; ++i)
                     weekDays.setProperty(i, "checked", false)
             } else {
-                // Загружаем данные существующего учителя
-                var teacherObj = model.teacherAt(tIndex)  // предполагается метод teacherAt
+                var teacherObj = model.teacherAt(tIndex)
                 if (teacherObj) {
                     teacherSurName.text = teacherObj.surname || ""
                     teacherName.text = teacherObj.name || ""
