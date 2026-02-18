@@ -143,7 +143,7 @@ Page {
                             color: mouseArea.containsMouse ? Qt.darker("#f5f5f5", 1.1) : "#f5f5f5"
                             border.color: "#79A0C1"
                             border.width: 1
-//"#395778"
+
                             RowLayout {
                                 anchors.fill: parent
                                 anchors.margins: 4
@@ -158,6 +158,14 @@ Page {
                                         var ind = roomsListView.model.index(index, 0)
                                         roomsListView.model.setData(ind, text, 1)
                                         console.log("Изменено имя:", text)
+                                    }
+
+                                    // Делаем поле овальным
+                                    background: Rectangle {
+                                        radius: height / 2
+                                        color: parent.focus ? "#e8f0fe" : "#f5f5f5"
+                                        border.color: parent.focus ? "#1976D2" : "#ccc"
+                                        border.width: 1
                                     }
                                 }
 
@@ -195,13 +203,21 @@ Page {
                         placeholderText: "Новое название кабинета"
                         Layout.fillWidth: true
                         onAccepted: addRoom()
+
+                        // Делаем поле овальным
+                        background: Rectangle {
+                            radius: height / 2
+                            color: parent.focus ? "#e8f0fe" : "#f5f5f5"
+                            border.color: parent.focus ? "#1976D2" : "#ccc"
+                            border.width: 1
+                        }
                     }
 
                     ComboBox {
                         id: newRoomSize
                         model: ["Маленький", "Большой"]
                         currentIndex: 0
-                        Layout.preferredWidth: 120
+                        Layout.preferredWidth: 80
                     }
 
                     Button {
