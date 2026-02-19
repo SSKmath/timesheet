@@ -39,6 +39,19 @@ Page {
             }
         }
 
+        ToolButton {
+            text: "Сгенерировать"
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            onClicked: {
+                if (schoolId < 0) return
+                var url = schoolModel.generateTimetablePdf(schoolId)
+                console.log("PDF url:", url)
+                if (url && url.length > 0)
+                    Qt.openUrlExternally(url)
+            }
+        }
+
         Label {
             text: schoolName
             font.pointSize: 16

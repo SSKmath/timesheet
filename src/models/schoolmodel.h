@@ -34,6 +34,8 @@ public:
     Q_INVOKABLE QObject *teacherModelAt(int index) const;
     Q_INVOKABLE QObject *lessonModelAt(int index) const;
     Q_INVOKABLE QObject *classModelAt(int index) const;
+    Q_INVOKABLE QString generateTimetablePdf(int index);
+
 
 private:
     QList<School*> m_schools;

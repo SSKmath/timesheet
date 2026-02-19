@@ -1,5 +1,13 @@
 #include "schoolmodel.h"
 #include <utility>
+#include <QPdfWriter>
+#include <QPainter>
+#include <QStandardPaths>
+#include <QDateTime>
+#include <QDir>
+#include <QUrl>
+#include <algorithm>
+#include <QRegularExpression>
 
 SchoolModel::SchoolModel(QObject *parent) : QAbstractListModel(parent)
 {
@@ -370,3 +378,402 @@ QObject *SchoolModel::classModelAt(int index) const
     School *s = m_schools.at(index);
     return s ? static_cast<QObject*>(s->classesModel()) : nullptr;
 }
+
+QString SchoolModel::generateTimetablePdf(int index)
+{
+    if (index < 0 || index >= m_schools.count())
+        return QString();
+
+    School *s = m_schools.at(index);
+    if (!s)
+        return QString();
+
+    RoomModel    *rm = qobject_cast<RoomModel*>(s->roomsModel());
+    TeacherModel *tm = qobject_cast<TeacherModel*>(s->teachersModel());
+    ClassModel   *cm = qobject_cast<ClassModel*>(s->classesModel());
+    LessonModel  *lm = qobject_cast<LessonModel*>(s->lessonsModel());
+
+
+    if (!cm || !lm)
+        return QString();
+
+    const int DAYS = 6;
+    const int PERIODS = 8;
+    QHash<int, int> classIdToIdx;
+    QVector<QString> classNames;
+    classNames.reserve(cm->rowCount());
+
+    for (int i = 0; i < cm->rowCount(); ++i)
+    {
+        QModelIndex ind = cm->index(i);
+        int cid = cm->data(ind, ClassModel::IdRole).toInt();
+        QString cname = cm->data(ind, ClassModel::NameRole).toString();
+        if (cid <= 0)
+            continue;
+
+        classIdToIdx[cid] = classNames.size();
+        classNames.push_back(cname);
+    }
+
+    const int C = classNames.size();
+    if (C == 0)
+        return QString();
+
+    QVector<QVector<QVector<QString>>> table(
+        C,
+        QVector<QVector<QString>>(DAYS, QVector<QString>(PERIODS))
+        );
+
+    QHash<int, QVector<bool>> teacherDays;
+    QHash<int, QString> teacherShort;
+    QHash<int, QVector<QVector<bool>>> teacherBusy;
+
+    if (tm)
+    {
+        for (int i = 0; i < tm->rowCount(); ++i)
+        {
+            QModelIndex ind = tm->index(i);
+            int tid = tm->data(ind, TeacherModel::IdRole).toInt();
+            if (tid <= 0)
+                continue;
+
+            QString surname = tm->data(ind, TeacherModel::SurnameRole).toString();
+            QString name = tm->data(ind, TeacherModel::NameRole).toString();
+
+            QString sh = surname;
+            if (!name.isEmpty())
+                sh += " " + name.left(1) + ".";
+
+            teacherShort[tid] = sh;
+
+            QVector<bool> days(DAYS, true);
+            QVariantList vdays = tm->data(ind, TeacherModel::WorkingDaysRole).toList();
+            if (vdays.size() == DAYS)
+            {
+                for (int d = 0; d < DAYS; ++d)
+                    days[d] = vdays[d].toBool();
+            }
+            teacherDays[tid] = days;
+
+            teacherBusy[tid] = QVector<QVector<bool>>(DAYS, QVector<bool>(PERIODS, false));
+        }
+    }
+
+    QVector<QString> roomNames;
+    int R = 0;
+
+    if (rm)
+    {
+        R = rm->rowCount();
+        roomNames.reserve(R);
+
+        for (int i = 0; i < R; ++i)
+        {
+            QModelIndex ind = rm->index(i);
+            QString rname = rm->data(ind, RoomModel::NameRole).toString();
+            if (rname.trimmed().isEmpty())
+                rname = QString::number(i + 1);
+            roomNames.push_back(rname);
+        }
+    }
+
+    QVector<QVector<QVector<bool>>> roomBusy;
+    if (R > 0)
+        roomBusy = QVector<QVector<QVector<bool>>>(R, QVector<QVector<bool>>(DAYS, QVector<bool>(PERIODS, false)));
+
+    auto roomIsBusy = [&](int ridx, int day, int p) -> bool {
+        if (R <= 0) return false;
+        return roomBusy[ridx][day][p];
+    };
+
+    auto setRoomBusy = [&](int ridx, int day, int p, bool v) {
+        if (R <= 0) return;
+        roomBusy[ridx][day][p] = v;
+    };
+
+
+    struct Occ
+    {
+        QString name;
+        bool isDouble;
+        int teacherId;
+        QVector<int> classes;
+        int len;
+    };
+
+    QVector<Occ> occs;
+
+    for (int i = 0; i < lm->rowCount(); ++i)
+    {
+        QModelIndex ind = lm->index(i);
+
+        QString lname  = lm->data(ind, LessonModel::NameRole).toString();
+        bool isDouble  = lm->data(ind, LessonModel::IsDoubleRole).toBool();
+        int teacherId  = lm->data(ind, LessonModel::TeacherIdRole).toInt();
+        QVariantList clsVar = lm->data(ind, LessonModel::ClassesRole).toList();
+
+        if (lname.trimmed().isEmpty())
+            continue;
+
+        QVector<int> clsIdx;
+        for (const QVariant &v : std::as_const(clsVar))
+        {
+            int cid = v.toInt();
+            if (classIdToIdx.contains(cid))
+                clsIdx.push_back(classIdToIdx[cid]);
+        }
+        if (clsIdx.isEmpty())
+            continue;
+
+        int perWeek = 1;
+        QObject *lobj = lm->lessonAt(i);
+        if (lobj)
+        {
+            QVariant pw = lobj->property("perWeek");
+            if (pw.isValid())
+            {
+                int val = pw.toInt();
+                if (val > 0)
+                    perWeek = val;
+            }
+        }
+
+        Occ base;
+        base.name = lname;
+        base.isDouble = isDouble;
+        base.teacherId = teacherId;
+        base.classes = clsIdx;
+        base.len = isDouble ? 2 : 1;
+
+        for (int k = 0; k < perWeek; ++k)
+            occs.push_back(base);
+    }
+
+    std::sort(occs.begin(), occs.end(), [](const Occ &a, const Occ &b) {
+        if (a.classes.size() != b.classes.size())
+            return a.classes.size() > b.classes.size();
+        if (a.len != b.len)
+            return a.len > b.len;
+        return a.name < b.name;
+    });
+
+    QVector<QString> unscheduled;
+
+    auto teacherCanDay = [&](int tid, int day) -> bool {
+        if (tid <= 0) return true;
+        if (!teacherDays.contains(tid)) return true;
+        return teacherDays[tid][day];
+    };
+
+    auto teacherIsBusy = [&](int tid, int day, int p) -> bool {
+        if (tid <= 0) return false;
+        if (!teacherBusy.contains(tid)) return false;
+        return teacherBusy[tid][day][p];
+    };
+
+    auto setTeacherBusy = [&](int tid, int day, int p, bool v) {
+        if (tid <= 0) return;
+        if (!teacherBusy.contains(tid))
+            teacherBusy[tid] = QVector<QVector<bool>>(DAYS, QVector<bool>(PERIODS, false));
+        teacherBusy[tid][day][p] = v;
+    };
+
+    for (const Occ &o : std::as_const(occs))
+    {
+        bool placed = false;
+
+        for (int day = 0; day < DAYS && !placed; ++day)
+        {
+            if (!teacherCanDay(o.teacherId, day))
+                continue;
+
+            for (int p = 0; p + o.len - 1 < PERIODS && !placed; ++p)
+            {
+                if (teacherIsBusy(o.teacherId, day, p)) continue;
+                if (o.len == 2 && teacherIsBusy(o.teacherId, day, p + 1)) continue;
+
+                bool ok = true;
+                for (int ci : o.classes)
+                {
+                    if (!table[ci][day][p].isEmpty()) { ok = false; break; }
+                    if (o.len == 2 && !table[ci][day][p + 1].isEmpty()) { ok = false; break; }
+                }
+                if (!ok) continue;
+
+                // --- choose room ---
+                int chosenRoom = -1;
+
+                if (R > 0)
+                {
+                    for (int ri = 0; ri < R; ++ri)
+                    {
+                        if (roomIsBusy(ri, day, p)) continue;
+                        if (o.len == 2 && roomIsBusy(ri, day, p + 1)) continue;
+                        chosenRoom = ri;
+                        break;
+                    }
+
+                    // нет свободного кабинета на это время — пробуем другой слот
+                    if (chosenRoom == -1)
+                        continue;
+                }
+
+                QString tshort = teacherShort.value(o.teacherId, QString());
+
+                QString cellText = o.name;
+                if (!tshort.isEmpty())
+                    cellText += "\n" + tshort;
+
+                if (chosenRoom != -1)
+                    cellText += "\nкаб. " + roomNames[chosenRoom];
+
+                for (int ci : o.classes)
+                {
+                    table[ci][day][p] = cellText;
+                    if (o.len == 2)
+                        table[ci][day][p + 1] = cellText;
+                }
+
+                setTeacherBusy(o.teacherId, day, p, true);
+                if (o.len == 2)
+                    setTeacherBusy(o.teacherId, day, p + 1, true);
+
+                if (chosenRoom != -1)
+                {
+                    setRoomBusy(chosenRoom, day, p, true);
+                    if (o.len == 2)
+                        setRoomBusy(chosenRoom, day, p + 1, true);
+                }
+
+                placed = true;
+
+            }
+        }
+
+        if (!placed)
+            unscheduled.push_back(o.name);
+    }
+
+    QString baseDir = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+    if (baseDir.isEmpty())
+        baseDir = QDir::homePath();
+
+    QDir out(baseDir);
+    if (!out.exists("Timesheet"))
+        out.mkdir("Timesheet");
+    out.cd("Timesheet");
+
+    QString safeName = s->name();
+    safeName.replace(QRegularExpression(R"([\\/:*?"<>|])"), "_");
+
+    QString stamp = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
+    QString filePath = out.filePath(safeName + "_timetable_" + stamp + ".pdf");
+
+    QPdfWriter writer(filePath);
+    writer.setPageSize(QPageSize(QPageSize::A4));
+    writer.setResolution(96);
+    writer.setPageMargins(QMarginsF(10, 10, 10, 10), QPageLayout::Millimeter);
+
+    QPainter painter(&writer);
+    if (!painter.isActive())
+        return QString();
+
+    const QStringList dayNames = { "Пн", "Вт", "Ср", "Чт", "Пт", "Сб" };
+
+    auto drawOneClass = [&](int classIdx) {
+        QRect page = writer.pageLayout().paintRectPixels(writer.resolution());
+
+        int x0 = page.left();
+        int y0 = page.top();
+        int w  = page.width();
+        int h  = page.height();
+
+        int topHeader = 70;
+        int tableTop = y0 + topHeader;
+
+        painter.setFont(QFont("Arial", 14, QFont::Bold));
+        painter.drawText(QRect(x0, y0, w, 40), Qt::AlignLeft | Qt::AlignVCenter,
+                         s->name() + " — " + classNames[classIdx]);
+
+        painter.setFont(QFont("Arial", 9));
+        painter.drawText(QRect(x0, y0 + 35, w, 25), Qt::AlignLeft | Qt::AlignVCenter,
+                         "Сгенерировано: " + QDateTime::currentDateTime().toString("dd.MM.yyyy HH:mm"));
+
+        int rows = PERIODS + 1;
+        int cols = DAYS + 1;
+
+        int gridH = h - topHeader - 40;
+        int gridW = w;
+
+        int cellH = gridH / rows;
+        int cellW = gridW / cols;
+
+        painter.setFont(QFont("Arial", 9));
+
+        for (int c = 0; c < cols; ++c)
+        {
+            QRect r(x0 + c * cellW, tableTop, cellW, cellH);
+            painter.drawRect(r);
+
+            QString txt;
+            if (c == 0) txt = "#";
+            else txt = dayNames[c - 1];
+
+            painter.drawText(r, Qt::AlignCenter, txt);
+        }
+
+        for (int r = 1; r < rows; ++r)
+        {
+            QRect rn(x0, tableTop + r * cellH, cellW, cellH);
+            painter.drawRect(rn);
+            painter.drawText(rn, Qt::AlignCenter, QString::number(r));
+
+            for (int c = 1; c < cols; ++c)
+            {
+                QRect cell(x0 + c * cellW, tableTop + r * cellH, cellW, cellH);
+                painter.drawRect(cell);
+
+                QString txt = table[classIdx][c - 1][r - 1];
+                painter.drawText(cell.adjusted(3, 3, -3, -3),
+                                 Qt::AlignCenter | Qt::TextWordWrap,
+                                 txt);
+            }
+        }
+    };
+
+    for (int ci = 0; ci < C; ++ci)
+    {
+        if (ci != 0)
+            writer.newPage();
+
+        drawOneClass(ci);
+    }
+
+    if (!unscheduled.isEmpty())
+    {
+        writer.newPage();
+        QRect page = writer.pageLayout().paintRectPixels(writer.resolution());
+
+        painter.setFont(QFont("Arial", 14, QFont::Bold));
+        painter.drawText(QRect(page.left(), page.top(), page.width(), 40),
+                         Qt::AlignLeft | Qt::AlignVCenter,
+                         "Не удалось разместить:");
+
+        painter.setFont(QFont("Arial", 10));
+        int y = page.top() + 50;
+        for (const QString &u : std::as_const(unscheduled))
+        {
+            painter.drawText(QRect(page.left(), y, page.width(), 18),
+                             Qt::AlignLeft | Qt::AlignVCenter,
+                             "• " + u);
+            y += 18;
+            if (y > page.bottom() - 20)
+                break;
+        }
+    }
+
+    painter.end();
+
+    return QUrl::fromLocalFile(filePath).toString();
+}
+
