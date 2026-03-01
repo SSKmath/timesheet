@@ -12,6 +12,7 @@ ApplicationWindow {
 
     QtObject {
         id: appState
+        property var roomModel: nul
         property var teacherModel: null
         property int teacherIndex: -1
         property bool teacherIsNew: false
@@ -54,6 +55,13 @@ ApplicationWindow {
     GroupDetails {
         id: groupDetails
         visible: currentPage === 4
+        anchors.fill: parent
+        onShowPageRequested: (pageIndex) => showPage(pageIndex)
+    }
+
+    TimetableDetails {
+        id: timetableDetails
+        visible: currentPage === 5
         anchors.fill: parent
         onShowPageRequested: (pageIndex) => showPage(pageIndex)
     }

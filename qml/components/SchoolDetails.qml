@@ -19,6 +19,7 @@ Page {
             if (schoolData) {
                 schoolName = schoolData.name
                 roomModel = schoolModel.roomModelAt(schoolId)
+                appState.roomModel = roomModel
                 teacherModel = schoolModel.teacherModelAt(schoolId)
                 appState.teacherModel = teacherModel
                 classModel = schoolModel.classModelAt(schoolId)
@@ -44,6 +45,15 @@ Page {
             font.pointSize: 16
             font.bold: true
             anchors.centerIn: parent
+        }
+
+        Button {
+            text: "Расписание"
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            onClicked: {
+                showPageRequested(5)
+            }
         }
     }
 

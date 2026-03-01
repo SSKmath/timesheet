@@ -25,6 +25,7 @@ qt_add_qml_module(apptimesheet
         qml/components/SchoolDetails.qml
         qml/components/TeacherDetails.qml
         qml/components/GroupDetails.qml
+        qml/components/TimetableDetails.qml
     RESOURCES
         qml/components/trash.png
     SOURCES
