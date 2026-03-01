@@ -393,14 +393,16 @@ QString SchoolModel::generateTimetablePdf(int index)
     ClassModel   *cm = qobject_cast<ClassModel*>(s->classesModel());
     LessonModel  *lm = qobject_cast<LessonModel*>(s->lessonsModel());
 
-
     if (!cm || !lm)
         return QString();
 
     const int DAYS = 6;
     const int PERIODS = 8;
+
     QHash<int, int> classIdToIdx;
+    QVector<int> classIds;
     QVector<QString> classNames;
+    classIds.reserve(cm->rowCount());
     classNames.reserve(cm->rowCount());
 
     for (int i = 0; i < cm->rowCount(); ++i)
@@ -408,22 +410,35 @@ QString SchoolModel::generateTimetablePdf(int index)
         QModelIndex ind = cm->index(i);
         int cid = cm->data(ind, ClassModel::IdRole).toInt();
         QString cname = cm->data(ind, ClassModel::NameRole).toString();
+
         if (cid <= 0)
             continue;
 
-        classIdToIdx[cid] = classNames.size();
+        classIdToIdx[cid] = classIds.size();
+        classIds.push_back(cid);
         classNames.push_back(cname);
     }
 
-    const int C = classNames.size();
+    const int C = classIds.size();
     if (C == 0)
         return QString();
 
-    QVector<QVector<QVector<QString>>> table(
+    QVector<QVector<QVector<QString>>> tableText(
         C,
         QVector<QVector<QString>>(DAYS, QVector<QString>(PERIODS))
         );
 
+    QVector<QVector<QVector<int>>> tableLesson(
+        C,
+        QVector<QVector<int>>(DAYS, QVector<int>(PERIODS, 0))
+        );
+
+    QVector<QVector<QHash<int, int>>> lessonCountByDay(
+        C,
+        QVector<QHash<int, int>>(DAYS)
+        );
+
+    // ---------- teachers ----------
     QHash<int, QVector<bool>> teacherDays;
     QHash<int, QString> teacherShort;
     QHash<int, QVector<QVector<bool>>> teacherBusy;
@@ -479,23 +494,17 @@ QString SchoolModel::generateTimetablePdf(int index)
 
     QVector<QVector<QVector<bool>>> roomBusy;
     if (R > 0)
-        roomBusy = QVector<QVector<QVector<bool>>>(R, QVector<QVector<bool>>(DAYS, QVector<bool>(PERIODS, false)));
-
-    auto roomIsBusy = [&](int ridx, int day, int p) -> bool {
-        if (R <= 0) return false;
-        return roomBusy[ridx][day][p];
-    };
-
-    auto setRoomBusy = [&](int ridx, int day, int p, bool v) {
-        if (R <= 0) return;
-        roomBusy[ridx][day][p] = v;
-    };
-
+    {
+        roomBusy = QVector<QVector<QVector<bool>>>(
+            R,
+            QVector<QVector<bool>>(DAYS, QVector<bool>(PERIODS, false))
+            );
+    }
 
     struct Occ
     {
+        int lessonId;
         QString name;
-        bool isDouble;
         int teacherId;
         QVector<int> classes;
         int len;
@@ -507,13 +516,18 @@ QString SchoolModel::generateTimetablePdf(int index)
     {
         QModelIndex ind = lm->index(i);
 
-        QString lname  = lm->data(ind, LessonModel::NameRole).toString();
-        bool isDouble  = lm->data(ind, LessonModel::IsDoubleRole).toBool();
-        int teacherId  = lm->data(ind, LessonModel::TeacherIdRole).toInt();
+        int lessonId    = lm->data(ind, LessonModel::IdRole).toInt();
+        QString lname   = lm->data(ind, LessonModel::NameRole).toString();
+        bool isDouble   = lm->data(ind, LessonModel::IsDoubleRole).toBool();
+        int teacherId   = lm->data(ind, LessonModel::TeacherIdRole).toInt();
+        int perWeek     = lm->data(ind, LessonModel::PerWeekRole).toInt();
         QVariantList clsVar = lm->data(ind, LessonModel::ClassesRole).toList();
 
-        if (lname.trimmed().isEmpty())
+        if (lessonId <= 0 || lname.trimmed().isEmpty())
             continue;
+
+        if (perWeek <= 0)
+            perWeek = 1;
 
         QVector<int> clsIdx;
         for (const QVariant &v : std::as_const(clsVar))
@@ -522,25 +536,13 @@ QString SchoolModel::generateTimetablePdf(int index)
             if (classIdToIdx.contains(cid))
                 clsIdx.push_back(classIdToIdx[cid]);
         }
+
         if (clsIdx.isEmpty())
             continue;
 
-        int perWeek = 1;
-        QObject *lobj = lm->lessonAt(i);
-        if (lobj)
-        {
-            QVariant pw = lobj->property("perWeek");
-            if (pw.isValid())
-            {
-                int val = pw.toInt();
-                if (val > 0)
-                    perWeek = val;
-            }
-        }
-
         Occ base;
+        base.lessonId = lessonId;
         base.name = lname;
-        base.isDouble = isDouble;
         base.teacherId = teacherId;
         base.classes = clsIdx;
         base.len = isDouble ? 2 : 1;
@@ -554,6 +556,8 @@ QString SchoolModel::generateTimetablePdf(int index)
             return a.classes.size() > b.classes.size();
         if (a.len != b.len)
             return a.len > b.len;
+        if (a.teacherId != b.teacherId)
+            return a.teacherId < b.teacherId;
         return a.name < b.name;
     });
 
@@ -578,80 +582,215 @@ QString SchoolModel::generateTimetablePdf(int index)
         teacherBusy[tid][day][p] = v;
     };
 
+    auto roomIsBusy = [&](int ridx, int day, int p) -> bool {
+        if (R <= 0) return false;
+        return roomBusy[ridx][day][p];
+    };
+
+    auto setRoomBusy = [&](int ridx, int day, int p, bool v) {
+        if (R <= 0) return;
+        roomBusy[ridx][day][p] = v;
+    };
+
+    auto findFreeRoom = [&](int day, int start, int len) -> int {
+        if (R <= 0)
+            return -1;
+
+        for (int ri = 0; ri < R; ++ri)
+        {
+            bool ok = true;
+            for (int k = 0; k < len; ++k)
+            {
+                if (roomIsBusy(ri, day, start + k))
+                {
+                    ok = false;
+                    break;
+                }
+            }
+            if (ok)
+                return ri;
+        }
+
+        return -2;
+    };
+
+    auto scoreForClass = [&](int classIdx, int day, int start, const Occ &o) -> int {
+        bool occ[PERIODS];
+        int beforeCount = 0;
+
+        for (int p = 0; p < PERIODS; ++p)
+        {
+            occ[p] = (tableLesson[classIdx][day][p] != 0);
+            if (occ[p])
+                beforeCount++;
+        }
+
+        bool touchesExisting = false;
+        if (beforeCount > 0)
+        {
+            if (start > 0 && occ[start - 1])
+                touchesExisting = true;
+            if (start + o.len < PERIODS && occ[start + o.len])
+                touchesExisting = true;
+        }
+
+        for (int k = 0; k < o.len; ++k)
+            occ[start + k] = true;
+
+        int first = -1;
+        int last = -1;
+        int filled = 0;
+
+        for (int p = 0; p < PERIODS; ++p)
+        {
+            if (occ[p])
+            {
+                if (first == -1)
+                    first = p;
+                last = p;
+                filled++;
+            }
+        }
+
+        int holes = 0;
+        if (filled > 0)
+            holes = (last - first + 1) - filled;
+
+        int score = 0;
+
+        score += holes * 100;
+
+        if (beforeCount > 0)
+        {
+            if (touchesExisting)
+                score -= 25;
+            else
+                score += 25;
+        }
+
+        int sameToday = lessonCountByDay[classIdx][day].value(o.lessonId, 0);
+        if (sameToday > 0)
+            score += 250 + sameToday * 150;
+
+        if (start > 0 && tableLesson[classIdx][day][start - 1] == o.lessonId)
+            score += 150;
+        if (start + o.len < PERIODS && tableLesson[classIdx][day][start + o.len] == o.lessonId)
+            score += 150;
+
+        if (last >= 0)
+            score += last;
+
+        return score;
+    };
+
     for (const Occ &o : std::as_const(occs))
     {
-        bool placed = false;
+        const int INF = 1000000000;
+        int bestScore = INF;
+        int bestDay = -1;
+        int bestStart = -1;
+        int bestRoom = -2;
 
-        for (int day = 0; day < DAYS && !placed; ++day)
+        for (int day = 0; day < DAYS; ++day)
         {
             if (!teacherCanDay(o.teacherId, day))
                 continue;
 
-            for (int p = 0; p + o.len - 1 < PERIODS && !placed; ++p)
+            for (int p = 0; p + o.len <= PERIODS; ++p)
             {
-                if (teacherIsBusy(o.teacherId, day, p)) continue;
-                if (o.len == 2 && teacherIsBusy(o.teacherId, day, p + 1)) continue;
-
                 bool ok = true;
-                for (int ci : o.classes)
+                for (int k = 0; k < o.len; ++k)
                 {
-                    if (!table[ci][day][p].isEmpty()) { ok = false; break; }
-                    if (o.len == 2 && !table[ci][day][p + 1].isEmpty()) { ok = false; break; }
-                }
-                if (!ok) continue;
-
-                // --- choose room ---
-                int chosenRoom = -1;
-
-                if (R > 0)
-                {
-                    for (int ri = 0; ri < R; ++ri)
+                    if (teacherIsBusy(o.teacherId, day, p + k))
                     {
-                        if (roomIsBusy(ri, day, p)) continue;
-                        if (o.len == 2 && roomIsBusy(ri, day, p + 1)) continue;
-                        chosenRoom = ri;
+                        ok = false;
                         break;
                     }
-
-                    // нет свободного кабинета на это время — пробуем другой слот
-                    if (chosenRoom == -1)
-                        continue;
                 }
-
-                QString tshort = teacherShort.value(o.teacherId, QString());
-
-                QString cellText = o.name;
-                if (!tshort.isEmpty())
-                    cellText += "\n" + tshort;
-
-                if (chosenRoom != -1)
-                    cellText += "\nкаб. " + roomNames[chosenRoom];
+                if (!ok)
+                    continue;
 
                 for (int ci : o.classes)
                 {
-                    table[ci][day][p] = cellText;
-                    if (o.len == 2)
-                        table[ci][day][p + 1] = cellText;
+                    for (int k = 0; k < o.len; ++k)
+                    {
+                        if (tableLesson[ci][day][p + k] != 0)
+                        {
+                            ok = false;
+                            break;
+                        }
+                    }
+                    if (!ok)
+                        break;
                 }
+                if (!ok)
+                    continue;
 
-                setTeacherBusy(o.teacherId, day, p, true);
-                if (o.len == 2)
-                    setTeacherBusy(o.teacherId, day, p + 1, true);
+                int roomChoice = findFreeRoom(day, p, o.len);
+                if (roomChoice == -2)
+                    continue;
 
-                if (chosenRoom != -1)
+                int score = 0;
+                for (int ci : o.classes)
+                    score += scoreForClass(ci, day, p, o);
+
+                score += day * 4 + p;
+
+                if (score < bestScore)
                 {
-                    setRoomBusy(chosenRoom, day, p, true);
-                    if (o.len == 2)
-                        setRoomBusy(chosenRoom, day, p + 1, true);
+                    bestScore = score;
+                    bestDay = day;
+                    bestStart = p;
+                    bestRoom = roomChoice;
                 }
-
-                placed = true;
-
             }
         }
 
-        if (!placed)
-            unscheduled.push_back(o.name);
+        if (bestDay == -1)
+        {
+            QString miss = o.name;
+            if (!o.classes.isEmpty())
+            {
+                QStringList cls;
+                for (int ci : o.classes)
+                    cls << classNames[ci];
+                miss += " (" + cls.join(", ") + ")";
+            }
+            unscheduled.push_back(miss);
+            continue;
+        }
+
+        QString tshort = teacherShort.value(o.teacherId, QString());
+
+        QString cellText = o.name;
+        if (!tshort.isEmpty())
+            cellText += "\n" + tshort;
+        if (bestRoom >= 0)
+            cellText += "\nкаб. " + roomNames[bestRoom];
+
+        for (int ci : o.classes)
+        {
+            tableText[ci][bestDay][bestStart] = cellText;
+            tableLesson[ci][bestDay][bestStart] = o.lessonId;
+
+            if (o.len == 2)
+            {
+                tableText[ci][bestDay][bestStart + 1] = cellText;
+                tableLesson[ci][bestDay][bestStart + 1] = o.lessonId;
+            }
+
+            lessonCountByDay[ci][bestDay][o.lessonId] =
+                lessonCountByDay[ci][bestDay].value(o.lessonId, 0) + 1;
+        }
+
+        for (int k = 0; k < o.len; ++k)
+            setTeacherBusy(o.teacherId, bestDay, bestStart + k, true);
+
+        if (bestRoom >= 0)
+        {
+            for (int k = 0; k < o.len; ++k)
+                setRoomBusy(bestRoom, bestDay, bestStart + k, true);
+        }
     }
 
     QString baseDir = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
@@ -688,54 +827,60 @@ QString SchoolModel::generateTimetablePdf(int index)
         int w  = page.width();
         int h  = page.height();
 
-        int topHeader = 70;
-        int tableTop = y0 + topHeader;
+        QRect titleRect(x0, y0, w, 34);
+        painter.fillRect(titleRect, Qt::lightGray);
+        painter.drawRect(titleRect);
 
         painter.setFont(QFont("Arial", 14, QFont::Bold));
-        painter.drawText(QRect(x0, y0, w, 40), Qt::AlignLeft | Qt::AlignVCenter,
+        painter.drawText(titleRect.adjusted(10, 0, -10, 0),
+                         Qt::AlignLeft | Qt::AlignVCenter,
                          s->name() + " — " + classNames[classIdx]);
 
         painter.setFont(QFont("Arial", 9));
-        painter.drawText(QRect(x0, y0 + 35, w, 25), Qt::AlignLeft | Qt::AlignVCenter,
+        painter.drawText(QRect(x0, y0 + 40, w, 18),
+                         Qt::AlignLeft | Qt::AlignVCenter,
                          "Сгенерировано: " + QDateTime::currentDateTime().toString("dd.MM.yyyy HH:mm"));
+
+        int tableTop = y0 + 68;
 
         int rows = PERIODS + 1;
         int cols = DAYS + 1;
 
-        int gridH = h - topHeader - 40;
+        int gridH = h - (tableTop - y0) - 18;
         int gridW = w;
 
         int cellH = gridH / rows;
         int cellW = gridW / cols;
 
-        painter.setFont(QFont("Arial", 9));
-
+        painter.setFont(QFont("Arial", 9, QFont::Bold));
         for (int c = 0; c < cols; ++c)
         {
             QRect r(x0 + c * cellW, tableTop, cellW, cellH);
+            painter.fillRect(r, Qt::lightGray);
             painter.drawRect(r);
 
-            QString txt;
-            if (c == 0) txt = "#";
-            else txt = dayNames[c - 1];
-
+            QString txt = (c == 0) ? "#" : dayNames[c - 1];
             painter.drawText(r, Qt::AlignCenter, txt);
         }
 
         for (int r = 1; r < rows; ++r)
         {
-            QRect rn(x0, tableTop + r * cellH, cellW, cellH);
-            painter.drawRect(rn);
-            painter.drawText(rn, Qt::AlignCenter, QString::number(r));
+            QRect numRect(x0, tableTop + r * cellH, cellW, cellH);
+            painter.fillRect(numRect, Qt::lightGray);
+            painter.drawRect(numRect);
 
+            painter.setFont(QFont("Arial", 9, QFont::Bold));
+            painter.drawText(numRect, Qt::AlignCenter, QString::number(r));
+
+            painter.setFont(QFont("Arial", 8));
             for (int c = 1; c < cols; ++c)
             {
                 QRect cell(x0 + c * cellW, tableTop + r * cellH, cellW, cellH);
                 painter.drawRect(cell);
 
-                QString txt = table[classIdx][c - 1][r - 1];
-                painter.drawText(cell.adjusted(3, 3, -3, -3),
-                                 Qt::AlignCenter | Qt::TextWordWrap,
+                QString txt = tableText[classIdx][c - 1][r - 1];
+                painter.drawText(cell.adjusted(4, 4, -4, -4),
+                                 Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap,
                                  txt);
             }
         }
@@ -754,8 +899,12 @@ QString SchoolModel::generateTimetablePdf(int index)
         writer.newPage();
         QRect page = writer.pageLayout().paintRectPixels(writer.resolution());
 
+        QRect titleRect(page.left(), page.top(), page.width(), 34);
+        painter.fillRect(titleRect, Qt::lightGray);
+        painter.drawRect(titleRect);
+
         painter.setFont(QFont("Arial", 14, QFont::Bold));
-        painter.drawText(QRect(page.left(), page.top(), page.width(), 40),
+        painter.drawText(titleRect.adjusted(10, 0, -10, 0),
                          Qt::AlignLeft | Qt::AlignVCenter,
                          "Не удалось разместить:");
 
@@ -763,7 +912,7 @@ QString SchoolModel::generateTimetablePdf(int index)
         int y = page.top() + 50;
         for (const QString &u : std::as_const(unscheduled))
         {
-            painter.drawText(QRect(page.left(), y, page.width(), 18),
+            painter.drawText(QRect(page.left() + 8, y, page.width() - 16, 18),
                              Qt::AlignLeft | Qt::AlignVCenter,
                              "• " + u);
             y += 18;
