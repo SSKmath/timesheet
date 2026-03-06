@@ -9,6 +9,7 @@ Page {
     readonly property var lessonModel: appState.lessonModel
     readonly property var roomModel: appState.roomModel
     readonly property var timetableModel: appState.timetableModel
+    readonly property var teacherModel: appState.teacherModel
 
     header: ToolBar {
         ToolButton {
@@ -63,32 +64,32 @@ Page {
                 }
             }
 
-            rowDelegate: Rectangle {
-                implicitHeight: 50
-                color: "white"
-                Text {
-                    anchors.centerIn: parent
-                    // Простой расчет: day = Math.floor(row / 8), slot = row % 8 + 1
-                    // Предполагаем 8 слотов в день
-                    text: {
-                        var days = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница"]
-                        var slotsPerDay = 8
-                        var dayIndex = Math.floor(row / slotsPerDay)
-                        var slotIndex = (row % slotsPerDay) + 1
-                        return days[dayIndex] + " " + slotIndex + "-й урок"
-                    }
-                }
-            }
+            // rowDelegate: Rectangle {
+            //     implicitHeight: 50
+            //     color: "white"
+            //     Text {
+            //         anchors.centerIn: parent
+            //         // Простой расчет: day = Math.floor(row / 8), slot = row % 8 + 1
+            //         // Предполагаем 8 слотов в день
+            //         text: {
+            //             var days = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница"]
+            //             var slotsPerDay = 8
+            //             var dayIndex = Math.floor(row / slotsPerDay)
+            //             var slotIndex = (row % slotsPerDay) + 1
+            //             return days[dayIndex] + " " + slotIndex + "-й урок"
+            //         }
+            //     }
+            // }
 
-            columnDelegate: Rectangle {
-                implicitWidth: 150
-                color: "white"
-                Text {
-                    anchors.centerIn: parent
-                    // Получаем имя комнаты из roomModel по колонке (column = index комнаты)
-                    text: roomModel.data(roomModel.index(column, 0), RoomModel.NameRole) || "Комната " + (column + 1)
-                }
-            }
+            // columnDelegate: Rectangle {
+            //     implicitWidth: 150
+            //     color: "white"
+            //     Text {
+            //         anchors.centerIn: parent
+            //         // Получаем имя комнаты из roomModel по колонке (column = index комнаты)
+            //         text: roomModel.data(roomModel.index(column, 0), RoomModel.NameRole) || "Комната " + (column + 1)
+            //     }
+            // }
         }
 
         ColumnLayout {
@@ -118,28 +119,52 @@ Page {
                     color: "gray"
                     radius: 5
 
+                    property real startX: 0
+                    property real startY: 0
+
                     Label {
-                        anchors.centerIn: parent
-                        text: name  // Имя урока из lessonModel
+                        anchors.top: parent.top
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: name
                     }
+
+                    Label {
+                        anchors.bottom: parent.bottom
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: teacherModel.teacherById(teacherId).surname
+                    }
+
+                    Behavior on x { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
+                    Behavior on y { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
 
                     MouseArea {
                         anchors.fill: parent
-                        drag.target: parent  // Делаем весь Rectangle draggable
+                        drag.target: parent
 
                         onPressed: {
-                            // Начинаем драг: устанавливаем mimeData
+                            startX = parent.x
+                            startY = parent.y
+
                             parent.Drag.active = true
                             parent.Drag.hotSpot.x = mouse.x
                             parent.Drag.hotSpot.y = mouse.y
-                            parent.Drag.mimeData = { "text/plain": model.id }  // Передаем ID урока (предполагаем роль IdRole в lessonModel)
+                            parent.Drag.mimeData = { "text/plain": model.id }
                             parent.Drag.dragType = Drag.Internal
-                            parent.Drag.keys = ["lesson"]  // Ключ для DropArea
+                            parent.Drag.keys = ["lesson"]
                             console.log("Starting drag for lesson ID:", model.id)
                         }
 
                         onReleased: {
                             parent.Drag.active = false
+
+                            parent.x = startX
+                            parent.y = startY
+                        }
+
+                        onCanceled: {
+                            parent.Drag.active = false
+                            parent.x = startX
+                            parent.y = startY
                         }
                     }
                 }

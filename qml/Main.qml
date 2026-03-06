@@ -12,7 +12,7 @@ ApplicationWindow {
 
     QtObject {
         id: appState
-        property var roomModel: nul
+        property var roomModel: null
         property var teacherModel: null
         property int teacherIndex: -1
         property bool teacherIsNew: false
