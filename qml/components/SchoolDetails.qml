@@ -26,6 +26,13 @@ Page {
                 appState.classModel = classModel
                 lessonModel = schoolModel.lessonModelAt(schoolId)
                 appState.lessonModel = lessonModel
+                /*
+                // Указываем модели кабинетов (RoomModel) в TimetableModel
+                timetableModel.setRoomModel(roomModel);
+                // Задаем число кабинетов и слотов (5 дней × 8 уроков)
+                timetableModel.setRoomCount(roomModel.rowCount());
+                timetableModel.setSlotCount(5 * 8);*/
+
                 console.log("Загружена школа:", schoolName, "с комнатами из C++ модели")
             }
         }

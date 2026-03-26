@@ -27,6 +27,7 @@ public:
     Q_INVOKABLE void appendRoom(const QString &name, const QString &size);
     Q_INVOKABLE void removeAt(int index);
     Q_INVOKABLE int count() const;
+    Q_INVOKABLE QString roomNameAt(int index) const;
 
 signals:
     void dataModified();

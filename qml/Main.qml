@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import "components"
+import App 1.0
 
 ApplicationWindow {
     id: root
@@ -19,6 +20,7 @@ ApplicationWindow {
         property var classModel: null
         property var schoolclassModel: null
         property var lessonModel: null
+        property var timetableModel: TimetableModel {}
     }
 
     property int currentPage: 0
