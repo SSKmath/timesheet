@@ -74,7 +74,7 @@ Qt::ItemFlags TimetableModel::flags(const QModelIndex &index) const
 QHash<int, QByteArray> TimetableModel::roleNames() const
 {
     QHash<int, QByteArray> roles;
-    // Назначаем имена ролей, которые будут использоваться в QML как model.lessonId и model.lessonName
+    roles[Qt::DisplayRole] = "display";
     roles[LessonIdRole] = "lessonId";
     roles[LessonNameRole] = "lessonName";
     return roles;
@@ -83,32 +83,38 @@ QHash<int, QByteArray> TimetableModel::roleNames() const
 QVariant TimetableModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
     if (role != Qt::DisplayRole)
-        return QVariant();
+        return {};
 
     if (orientation == Qt::Horizontal) {
-        RoomModel *rooms = qobject_cast<RoomModel *>(m_roomModel);
-        // Заголовки столбцов: имена кабинетов из модели m_roomModel
-        if (rooms) {
-            return rooms->roomNameAt(section);
+        if (auto rooms = qobject_cast<RoomModel *>(m_roomModel)) {
+            const QString name = rooms->roomNameAt(section);
+            qDebug() << section << ' ' << name << '\n';
+            if (!name.isEmpty())
+                return name;
         }
-        return QString("Кабинет %1").arg(section+1);
-    } else {
-        // Заголовки строк: дни недели и время (рассчитываем как in QML)
-        // Предполагаем, что слотов в неделю = 5 дней * n слотов в день
-        static const QStringList days = {"Понедельник", "Вторник", "Среда", "Четверг", "Пятница"};
-        int slotsPerDay = (m_slotCount + 4) / 5; // целочисленное деление, округляем вверх
-        int dayIndex = section / slotsPerDay;
-        int slotIndex = (section % slotsPerDay) + 1;
-        if (dayIndex < days.size()) {
-            int hour = 9 + slotIndex - 1; // начинаем с 9:00
-            return QString("%1 %2:%3")
-                .arg(days[dayIndex])
-                .arg(hour, 2, 10, QChar('0'))
-                .arg("00");
-        }
-        // По умолчанию просто номер строки
-        return QString("Slot %1").arg(section);
+        return QString("Кабинет %1").arg(section + 1);
     }
+
+    static const QStringList days = {
+        "Понедельник", "Вторник", "Среда", "Четверг", "Пятница"
+    };
+
+    if (m_slotCount <= 0)
+        return QString("Slot %1").arg(section + 1);
+
+    const int slotsPerDay = qMax(1, (m_slotCount + 4) / 5);
+    const int dayIndex = section / slotsPerDay;
+    const int slotIndex = (section % slotsPerDay) + 1;
+
+    if (dayIndex < days.size()) {
+        const int hour = 9 + slotIndex - 1;
+        return QString("%1 %2:%3")
+            .arg(days[dayIndex])
+            .arg(hour, 2, 10, QChar('0'))
+            .arg("00");
+    }
+
+    return QString("Slot %1").arg(section + 1);
 }
 
 void TimetableModel::setRoomCount(int count)

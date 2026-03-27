@@ -99,7 +99,7 @@ QString RoomModel::roomNameAt(int index) const
     // Проверяем границы, чтобы не упасть на несуществующем элементе
     if (index < 0 || index >= m_rooms.size() || !m_rooms[index])
         return QString();
-
+    return m_rooms[index]->name(); // я написал такой костыль, но мне кажется проще
     // Берём значение через data(), чтобы не лезть напрямую в детали хранения
     return data(this->index(index, 0), NameRole).toString();
 }
