@@ -29,6 +29,7 @@ Page {
 
                 // Указываем модели кабинетов (RoomModel) в TimetableModel
                 appState.timetableModel.setRoomModel(roomModel);
+                appState.timetableModel.setLessonModel(lessonModel);
                 // Задаем число кабинетов и слотов (5 дней × 8 уроков)
                 appState.timetableModel.setRoomCount(roomModel.rowCount());
                 appState.timetableModel.setSlotCount(5 * 8);

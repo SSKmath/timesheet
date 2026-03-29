@@ -159,3 +159,26 @@ QObject *LessonModel::lessonAt(int index) const
         return nullptr;
     return m_lessons.at(index);
 }
+
+int LessonModel::idTeacher(QString id) const
+{
+    for (Lesson *les : m_lessons)
+    {
+        if (les->id() == id.toInt())
+            return les->teacherId();
+    }
+}
+
+int LessonModel::idClass(QString id) const
+{
+    for (Lesson *les : m_lessons)
+    {
+        if (les->id() == id.toInt())
+            return les->classes()[0];
+    }
+}
+
+QList<Lesson*> LessonModel::lessons() const
+{
+    return m_lessons;
+}

@@ -40,6 +40,10 @@ public:
     Q_INVOKABLE void removeAt(int index);
     Q_INVOKABLE int count() const;
     Q_INVOKABLE QObject *lessonAt(int index) const;
+    Q_INVOKABLE int idTeacher(QString id) const;
+    Q_INVOKABLE int idClass(QString id) const;
+
+    QList<Lesson*> lessons() const;
 
 signals:
     void dataModified();

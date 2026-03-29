@@ -1,9 +1,9 @@
-// TimetableModel.h
 #ifndef TIMETABLEMODEL_H
 #define TIMETABLEMODEL_H
 
 #include <QAbstractTableModel>
 #include <QList>
+#include <QString>
 
 struct LessonAssignment {
     QString lessonId;
@@ -13,41 +13,63 @@ struct LessonAssignment {
 class TimetableModel : public QAbstractTableModel
 {
     Q_OBJECT
+
+    // Эта "ревизия" нужна, чтобы QML понял:
+    // "список использованных/неиспользованных уроков изменился, пересчитай bindings"
+    Q_PROPERTY(int lessonUsageRevision READ lessonUsageRevision NOTIFY lessonUsageChanged)
+
 public:
     explicit TimetableModel(QObject *parent = nullptr);
 
-    // Роли данных для QML (добавлены через Q_ENUM для доступа из QML)
     enum Roles {
         LessonIdRole = Qt::UserRole + 1,
         LessonNameRole
     };
     Q_ENUM(Roles)
 
-    // Базовые переопределения QAbstractTableModel:
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
     int columnCount(const QModelIndex &parent = QModelIndex()) const override;
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 
-    // Для редактирования ячеек
     bool setData(const QModelIndex &index, const QVariant &value, int role) override;
     Qt::ItemFlags flags(const QModelIndex &index) const override;
-
-    // Переопределяем roleNames для имен ролей в QML
     QHash<int, QByteArray> roleNames() const override;
-
-    // Переопределяем headerData для заголовков столбцов/строк
     QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
-    // Инвокабельные методы для настройки таблицы
-    Q_INVOKABLE void setRoomCount(int count);  // установить количество кабинетов (столбцов)
-    Q_INVOKABLE void setSlotCount(int count);  // установить количество слотов (строк)
-    Q_INVOKABLE void setRoomModel(QObject *roomModel); // указать модель кабинетов (для имен)
+    Q_INVOKABLE void setRoomCount(int count);
+    Q_INVOKABLE void setSlotCount(int count);
+    Q_INVOKABLE void setRoomModel(QObject *roomModel);
+    Q_INVOKABLE void setLessonModel(QObject *lessonModel);
+
+    // Главный метод: поставить урок в конкретную ячейку
+    Q_INVOKABLE bool placeLesson(int row, int column,
+                                 const QString &lessonId,
+                                 const QString &lessonName);
+
+    // Очистить ячейку
+    Q_INVOKABLE bool clearLesson(int row, int column);
+
+    // Проверить, используется ли урок уже в таблице
+    Q_INVOKABLE bool isLessonUsed(const QString &lessonId) const;
+
+    Q_INVOKABLE void generate();
+
+    int lessonUsageRevision() const { return m_lessonUsageRevision; }
+
+signals:
+    void lessonUsageChanged();
 
 private:
-    int m_roomCount;   // число кабинетов (столбцов)
-    int m_slotCount;   // число временных слотов (строк)
-    QList<LessonAssignment> m_cells; // плоский массив размера (m_roomCount * m_slotCount)
-    QObject *m_roomModel; // указатель на существующую модель кабинетов (RoomModel)
+    bool isValidCell(int row, int column) const;
+    int cellIndex(int row, int column) const;
+
+    int m_roomCount;
+    int m_slotCount;
+    QList<LessonAssignment> m_cells;
+    QObject *m_roomModel;
+    QObject *m_lessonModel;
+
+    int m_lessonUsageRevision = 0;
 };
 
 #endif // TIMETABLEMODEL_H

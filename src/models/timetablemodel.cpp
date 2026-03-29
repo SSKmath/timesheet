@@ -1,13 +1,29 @@
-// TimetableModel.cpp
 #include "TimetableModel.h"
-#include "roommodel.h"  // для доступа к RoomModel::NameRole
+#include "roommodel.h"
 #include <QVariant>
+#include <QDebug>
+#include "lesson.h"
+#include "lessonmodel.h"
 
 TimetableModel::TimetableModel(QObject *parent)
     : QAbstractTableModel(parent),
-    m_roomCount(0), m_slotCount(0), m_roomModel(nullptr)
+    m_roomCount(0),
+    m_slotCount(0),
+    m_roomModel(nullptr),
+    m_lessonModel(nullptr),
+    m_lessonUsageRevision(0)
 {
-    // Изначально модель пуста
+}
+
+bool TimetableModel::isValidCell(int row, int column) const
+{
+    return row >= 0 && row < m_slotCount &&
+           column >= 0 && column < m_roomCount;
+}
+
+int TimetableModel::cellIndex(int row, int column) const
+{
+    return row * m_roomCount + column;
 }
 
 int TimetableModel::rowCount(const QModelIndex & /*parent*/) const
@@ -28,12 +44,11 @@ QVariant TimetableModel::data(const QModelIndex &index, int role) const
         return QVariant();
 
     const LessonAssignment &cell = m_cells[index.row() * m_roomCount + index.column()];
+
     switch (role) {
     case LessonIdRole:
-        // Возвращаем идентификатор урока (например для логики)
         return cell.lessonId;
     case LessonNameRole:
-        // Возвращаем название урока для отображения (или пусто)
         return cell.lessonName;
     default:
         return QVariant();
@@ -45,29 +60,16 @@ bool TimetableModel::setData(const QModelIndex &index, const QVariant &value, in
     if (!index.isValid() || role != LessonIdRole)
         return false;
 
-    int row = index.row();
-    int col = index.column();
-    int pos = row * m_roomCount + col;
-    if (pos < 0 || pos >= m_cells.size())
-        return false;
-
-    QString lessonId = value.toString();
-    // Задаем идентификатор урока
-    m_cells[pos].lessonId = lessonId;
-    // При успешном получении id, заполняем имя урока той же строкой.
-    // В реальном приложении здесь можно подгрузить название из модели уроков.
-    m_cells[pos].lessonName = lessonId;
-
-    // Сигнализируем, что данные ячейки изменились (для обновления вида)
-    emit dataChanged(index, index, {LessonIdRole, LessonNameRole});
-    return true;
+    // Для совместимости с обычным редактированием через model.setData()
+    // считаем, что lessonName = lessonId.
+    return placeLesson(index.row(), index.column(), value.toString(), value.toString());
 }
 
 Qt::ItemFlags TimetableModel::flags(const QModelIndex &index) const
 {
     if (!index.isValid())
         return Qt::NoItemFlags;
-    // Ячейки разрешаем редактировать (нужно для setData) и выделять
+
     return Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsEditable;
 }
 
@@ -88,7 +90,6 @@ QVariant TimetableModel::headerData(int section, Qt::Orientation orientation, in
     if (orientation == Qt::Horizontal) {
         if (auto rooms = qobject_cast<RoomModel *>(m_roomModel)) {
             const QString name = rooms->roomNameAt(section);
-            qDebug() << section << ' ' << name << '\n';
             if (!name.isEmpty())
                 return name;
         }
@@ -117,32 +118,206 @@ QVariant TimetableModel::headerData(int section, Qt::Orientation orientation, in
     return QString("Slot %1").arg(section + 1);
 }
 
+bool TimetableModel::isLessonUsed(const QString &lessonId) const
+{
+    if (lessonId.isEmpty())
+        return false;
+
+    for (const LessonAssignment &cell : m_cells) {
+        if (cell.lessonId == lessonId)
+            return true;
+    }
+    return false;
+}
+
+bool TimetableModel::placeLesson(int row, int column, const QString &lessonId, const QString &lessonName)
+{
+    if (!isValidCell(row, column))
+        return false;
+
+    const int targetPos = cellIndex(row, column);
+
+    // Ищем, не стоит ли этот же урок уже в другой ячейке
+    int oldPos = -1;
+    for (int i = 0; i < m_cells.size(); ++i) {
+        if (m_cells[i].lessonId == lessonId) {
+            oldPos = i;
+            break;
+        }
+    }
+
+    // Если урок уже был в другой ячейке — очищаем старую ячейку
+    if (oldPos >= 0 && oldPos != targetPos) {
+        const int oldRow = oldPos / m_roomCount;
+        const int oldCol = oldPos % m_roomCount;
+
+        m_cells[oldPos].lessonId.clear();
+        m_cells[oldPos].lessonName.clear();
+
+        emit dataChanged(index(oldRow, oldCol), index(oldRow, oldCol),
+                         {LessonIdRole, LessonNameRole});
+    }
+
+    // Если в целевой ячейке был другой урок — просто перезапишем его
+    m_cells[targetPos].lessonId = lessonId;
+    m_cells[targetPos].lessonName = lessonName;
+
+    emit dataChanged(index(row, column), index(row, column),
+                     {LessonIdRole, LessonNameRole});
+
+    ++m_lessonUsageRevision;
+    emit lessonUsageChanged();
+
+    /*for (auto x : m_cells)
+        qDebug() << x.lessonId << ' ' << x.lessonName << "  ";
+    qDebug() << '\n';*/
+
+    return true;
+}
+
+bool TimetableModel::clearLesson(int row, int column)
+{
+    if (!isValidCell(row, column))
+        return false;
+
+    const int pos = cellIndex(row, column);
+
+    if (m_cells[pos].lessonId.isEmpty() && m_cells[pos].lessonName.isEmpty())
+        return true;
+
+    m_cells[pos].lessonId.clear();
+    m_cells[pos].lessonName.clear();
+
+    emit dataChanged(index(row, column), index(row, column),
+                     {LessonIdRole, LessonNameRole});
+
+    ++m_lessonUsageRevision;
+    emit lessonUsageChanged();
+
+    return true;
+}
+
 void TimetableModel::setRoomCount(int count)
 {
     if (count < 0)
         return;
+
     beginResetModel();
     m_roomCount = count;
-    // Пересоздаем массив ячеек
     m_cells.clear();
     m_cells.resize(m_roomCount * m_slotCount);
     endResetModel();
+
+    ++m_lessonUsageRevision;
+    emit lessonUsageChanged();
 }
 
 void TimetableModel::setSlotCount(int count)
 {
     if (count < 0)
         return;
+
     beginResetModel();
     m_slotCount = count;
-    // Пересоздаем массив ячеек
     m_cells.clear();
     m_cells.resize(m_roomCount * m_slotCount);
     endResetModel();
+
+    ++m_lessonUsageRevision;
+    emit lessonUsageChanged();
 }
 
 void TimetableModel::setRoomModel(QObject *roomModel)
 {
-    // Принимаем указатель на модель кабинетов (RoomModel*). Можно проверять тип.
     m_roomModel = roomModel;
+}
+
+void TimetableModel::setLessonModel(QObject *lessonModel)
+{
+    m_lessonModel = lessonModel;
+}
+
+using namespace std;
+
+bool augment(int v, map<int, bool> &used, map<int, vector<pair<int, int>>> &g, vector<pair<int, int>> &match)
+{
+    if (used[v])
+        return false;
+    used[v] = true;
+
+    for (auto [to, id] : g[v])
+    {
+        if (match[to].first == -1 || augment(match[to].first, used, g, match))
+        {
+            match[to] = {v, id};
+            return true;
+        }
+    }
+    return false;
+}
+
+vector<pair<int, int>> kuhn(QList<Lesson*> &lessons)
+{
+    map<int, vector<pair<int, int>>> g;
+    map<int, bool> used;
+    for (Lesson *pl : lessons)
+    {
+        used[pl->teacherId()] = false;
+        g[pl->teacherId()].push_back({pl->classes()[0], pl->id()});
+    }
+
+    vector<pair<int, int>> match(100, {-1, -1});
+
+    for (auto [v, classes] : g)
+    {
+        if (augment(v, used, g, match))
+            for (auto & [tmp, b] : used)
+                b = false;
+    }
+
+    return match;
+}
+
+Q_INVOKABLE void TimetableModel::generate()
+{
+    qDebug() << "generating";
+
+    QList<Lesson*> lessons = qobject_cast<LessonModel *>(m_lessonModel)->lessons();
+
+    int row = 0;
+    while (lessons.size() > 0)
+    {
+        qDebug() << lessons.size();
+        vector<pair<int, int>> match = kuhn(lessons);
+
+        set<int> deleted;
+        int cnt = 0;
+        for (int i = 0; cnt < m_roomCount && i < match.size(); ++i)
+        {
+            if (match[i].first == -1)
+                continue;
+
+            QString name;
+            for (Lesson *les : lessons)
+                if (les->id() == match[i].second)
+                {
+                    name = les->name();
+                    break;
+                }
+
+            placeLesson(row, cnt++, QString::number(match[i].second), name);
+            deleted.insert(match[i].second);
+        }
+        row++;
+
+        QList<Lesson*> newLessons;
+        for (int i = 0; i < lessons.size(); ++i)
+        {
+            if (!deleted.count(lessons[i]->id()))
+                newLessons.push_back(lessons[i]);
+        }
+        lessons = newLessons;
+    }
+
+    qDebug() << "end generating";
 }

@@ -1,15 +1,12 @@
-// TimetableDetails.qml
-
-
-// TimetableDetails.qml (упрощённая версия)
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import Qt.labs.qmlmodels  // для TableModel
+import Qt.labs.qmlmodels
 
 Page {
     id: timetableDetailsPage
-    width: 800; height: 600
+    width: 800
+    height: 600
 
     signal showPageRequested(int pageIndex)
 
@@ -17,21 +14,28 @@ Page {
     readonly property var roomModel: appState.roomModel
     readonly property var timetableModel: appState.timetableModel
     readonly property var teacherModel: appState.teacherModel
+    readonly property var classModel: appState.classModel
 
-    property int selectLessonId: -1
+    // Сейчас выбранный урок из списка
+    property string selectedLessonId: ""
+    property string selectedLessonName: ""
 
     header: ToolBar {
         RowLayout {
-            anchors.fill: parent; spacing: 8
-            ToolButton { text: "Назад"; onClicked: showPageRequested(2) }
-            Label { text: "Расписание"; font.bold: true }
-            Item { Layout.fillWidth: true }
+            anchors.fill: parent
+            spacing: 8
+
             ToolButton {
-                text: "Кнопка"
-                onClicked: {
-                    console.log(timetableModel.rowCount());
-                }
+                text: "Назад"
+                onClicked: showPageRequested(2)
             }
+
+            Label {
+                text: "Расписание"
+                font.bold: true
+            }
+
+            Item { Layout.fillWidth: true }
         }
     }
 
@@ -39,7 +43,7 @@ Page {
         anchors.fill: parent
         spacing: 8
 
-        // Левая часть: таблица с заголовками
+        // Левая часть: таблица
         Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -84,7 +88,7 @@ Page {
                     implicitHeight: 48
                     border.width: 1
                     border.color: "#cccccc"
-                    color: "white"
+                    color: lessonName.length > 0 ? "#eef7ff" : "white"
 
                     required property int row
                     required property int column
@@ -97,6 +101,36 @@ Page {
                         wrapMode: Text.WordWrap
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
+                    }
+
+                    Text {
+                        text: lessonId ? teacherModel.teacherById(lessonModel.idTeacher(lessonId)).surname : ""
+                    }
+
+                    Text {
+                        text: lessonId ? classModel.classById(lessonModel.idClass(lessonId)).name : ""
+                        anchors.top: parent.top
+                        anchors.right: parent.right
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        acceptedButtons: Qt.LeftButton | Qt.RightButton
+
+                        onClicked: function(mouse) {
+                            if (mouse.button === Qt.LeftButton) {
+                                if (selectedLessonId !== "") {
+                                    if (timetableModel.placeLesson(row, column,
+                                                                   selectedLessonId,
+                                                                   selectedLessonName)) {
+                                        selectedLessonId = ""
+                                        selectedLessonName = ""
+                                    }
+                                }
+                            } else if (mouse.button === Qt.RightButton) {
+                                timetableModel.clearLesson(row, column)
+                            }
+                        }
                     }
                 }
             }
@@ -118,6 +152,19 @@ Page {
                     color: "#dddddd"
                     Layout.fillWidth: true
                     Layout.preferredHeight: 40
+
+                    Button {
+                        anchors.centerIn: parent
+                        text: "Генерировать"
+                        onClicked: timetableModel.generate()
+                    }
+                }
+
+                Rectangle {
+                    color: "#dddddd"
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 40
+
                     Label {
                         anchors.centerIn: parent
                         text: "Неиспользованные уроки"
@@ -129,25 +176,56 @@ Page {
                     id: unusedLessons
                     Layout.fillWidth: true
                     Layout.fillHeight: true
+                    clip: true
                     model: lessonModel
+
                     delegate: Rectangle {
                         id: lessonCard
                         width: ListView.view.width
-                        height: 60
-                        color: id === selectLessonId ? "#ffcccc" : "#ffffff"
+
+                        required property string id
+                        required property string name
+                        required property int teacherId
+
+                        property bool used: timetableModel.lessonUsageRevision >= 0
+                                            && timetableModel.isLessonUsed(id)
+
+                        required property var classes
+
+                        height: used ? 0 : 60
+                        visible: !used
+                        opacity: selectedLessonId === id ? 0.75 : 1.0
+                        color: selectedLessonId === id ? "#ffcccc" : "#ffffff"
                         border.color: "#aaaaaa"
                         radius: 4
 
                         Column {
                             anchors.centerIn: parent
-                            Text { text: name; font.pixelSize: 14 }
-                            Text { text: teacherModel.teacherById(teacherId).surname; font.pixelSize: 12; color: "gray" }
+                            spacing: 2
+
+                            Text {
+                                text: name
+                                font.pixelSize: 14
+                            }
+
+                            Text {
+                                text: teacherModel.teacherById(teacherId).surname
+                                font.pixelSize: 12
+                                color: "gray"
+                            }
+
+                            Text {
+                                text: classes.length > 0 ? classModel.classAt(classes[0] - 1).name : ""
+                                font.pixelSize: 12
+                            }
                         }
 
                         MouseArea {
                             anchors.fill: parent
+                            enabled: !used
                             onClicked: {
-                                selectLessonId = id;
+                                selectedLessonId = id
+                                selectedLessonName = name
                             }
                         }
                     }

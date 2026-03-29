@@ -91,3 +91,13 @@ QObject *ClassModel::classAt(int index) const
         return nullptr;
     return m_classes.at(index);
 }
+
+QObject *ClassModel::classById(int id) const
+{
+    for (SchoolClass *tp : m_classes)
+    {
+        if (tp->id() == id)
+            return tp;
+    }
+    // потом написать, что будет, если не нашёлся учитель
+}
