@@ -10,6 +10,7 @@ Page {
     property string schoolName: ""
     property var roomModel: null
     property var teacherModel: null
+    property var groupModel: null
 
     onSchoolIdChanged: {
         if (schoolId >= 0) {
@@ -18,11 +19,13 @@ Page {
                 schoolName = schoolData.name
                 roomModel = schoolModel.roomModelAt(schoolId)
                 teacherModel = schoolModel.teacherModelAt(schoolId)
+                groupModel = schoolModel.groupModelAt(schoolId)
                 appState.teacherModel = teacherModel
                 console.log("Загружена школа:", schoolName)
             }
         }
     }
+
     header: ColumnLayout {
         spacing: 0
         ToolBar {
@@ -160,7 +163,6 @@ Page {
                                         console.log("Изменено имя:", text)
                                     }
 
-                                    // Делаем поле овальным
                                     background: Rectangle {
                                         radius: height / 2
                                         color: parent.focus ? "#e8f0fe" : "#f5f5f5"
@@ -204,7 +206,6 @@ Page {
                         Layout.fillWidth: true
                         onAccepted: addRoom()
 
-                        // Делаем поле овальным
                         background: Rectangle {
                             radius: height / 2
                             color: parent.focus ? "#e8f0fe" : "#f5f5f5"
@@ -357,20 +358,17 @@ Page {
                     clip: true
 
                     ListView {
-                        id: klassListView
+                        id: groupsListView
                         width: parent.width
                         height: parent.height
-                        model: ListModel {
-                            ListElement { name: "10А" }
-                            ListElement { name: "10Б" }
-                        }
+                        model: groupModel
                         spacing: 10
                         clip: true
 
                         delegate: Rectangle {
+                            radius: 10
                             width: parent.width
                             height: 40
-                            radius: 10
                             color: mouseArea.containsMouse ? Qt.darker("#f5f5f5", 1.1) : "#f5f5f5"
                             border.color: "#79A0C1"
                             border.width: 1
@@ -381,11 +379,13 @@ Page {
                                 spacing: 8
 
                                 Label {
-                                    text: name
+                                    text: model.name  // предполагаем, что groupModel содержит поле name
                                     Layout.fillWidth: true
                                     MouseArea {
                                         anchors.fill: parent
                                         onClicked: {
+                                            appState.groupIndex = index
+                                            appState.groupIsNew = false
                                             showPageRequested(4)
                                             console.log("Показать информацию о классе")
                                         }
@@ -397,7 +397,8 @@ Page {
                                 Button {
                                     text: "🞨"
                                     onClicked: {
-                                        console.log("Удаляем класс:", name)
+                                        groupModel.removeAt(index)
+                                        console.log("Удаляем класс:", model.name)
                                     }
                                 }
                             }
@@ -414,6 +415,7 @@ Page {
                         text: "Добавить"
                         onClicked: {
                             console.log("Добавить класс")
+                            showPageRequested(4)
                         }
                     }
                 }
