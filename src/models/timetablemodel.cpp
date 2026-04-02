@@ -87,8 +87,14 @@ void TimetableModel::saveToStorage() const
     if (m_roomCount <= 0 || m_slotCount <= 0)
         return;
 
+    if (m_loadedSignature.isEmpty())
+        return;
+
     const QString schoolId = currentSchoolId();
     if (schoolId.isEmpty())
+        return;
+
+    if (schoolId != m_loadedSchoolId)
         return;
 
     if (!ensureSchoolTimesheetDir(schoolId))
@@ -204,6 +210,7 @@ void TimetableModel::tryLoadFromStorage()
 
     m_loadingFromStorage = false;
     m_loadedSignature = signature;
+    m_loadedSchoolId = schoolId;
 
     ++m_lessonUsageRevision;
     emit lessonUsageChanged();

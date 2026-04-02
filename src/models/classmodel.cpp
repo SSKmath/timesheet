@@ -99,5 +99,5 @@ QObject *ClassModel::classById(int id) const
         if (tp->id() == id)
             return tp;
     }
-    // потом написать, что будет, если не нашёлся учитель
+    return nullptr;
 }

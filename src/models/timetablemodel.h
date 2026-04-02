@@ -83,6 +83,7 @@ private:
     QString m_loadedSignature;
     bool m_loadingFromStorage = false;
     bool m_suspendAutosave = false;
+    QString m_loadedSchoolId;
 
     QMetaObject::Connection m_roomRowsInsertedConnection;
     QMetaObject::Connection m_roomRowsRemovedConnection;

@@ -13,36 +13,53 @@ Page {
     property var classModel: null
     property var lessonModel: null
 
-    onSchoolIdChanged: {
-        if (schoolId >= 0) {
-            var schoolData = schoolModel.get(schoolId)
-            if (schoolData) {
-                schoolName = schoolData.name
-                roomModel = schoolModel.roomModelAt(schoolId)
-                appState.roomModel = roomModel
-                teacherModel = schoolModel.teacherModelAt(schoolId)
-                appState.teacherModel = teacherModel
-                classModel = schoolModel.classModelAt(schoolId)
-                appState.classModel = classModel
-                lessonModel = schoolModel.lessonModelAt(schoolId)
-                appState.lessonModel = lessonModel
+    function loadSchoolData() {
+        if (schoolId < 0)
+            return
 
-                // Указываем модели кабинетов (RoomModel) в TimetableModel
-                appState.timetableModel.setRoomModel(roomModel);
-                appState.timetableModel.setLessonModel(lessonModel);
-                // Задаем число кабинетов и слотов (5 дней × 8 уроков)
-                appState.timetableModel.setRoomCount(roomModel.rowCount());
-                appState.timetableModel.setSlotCount(5 * 8);
+        var schoolData = schoolModel.get(schoolId)
+        if (!schoolData)
+            return
 
-                console.log("Загружена школа:", schoolName, "с комнатами из C++ модели")
-            }
-        }
+        schoolName = schoolData.name
+        roomModel = schoolModel.roomModelAt(schoolId)
+        teacherModel = schoolModel.teacherModelAt(schoolId)
+        classModel = schoolModel.classModelAt(schoolId)
+        lessonModel = schoolModel.lessonModelAt(schoolId)
+
+        appState.roomModel = roomModel
+        appState.teacherModel = teacherModel
+        appState.classModel = classModel
+        appState.lessonModel = lessonModel
+
+        appState.timetableModel.setRoomModel(roomModel)
+        appState.timetableModel.setLessonModel(lessonModel)
+        appState.timetableModel.setRoomCount(roomModel ? roomModel.rowCount() : 0)
+        appState.timetableModel.setSlotCount(5 * 8)
+
+        console.log("Загружена школа:", schoolName, "с комнатами из C++ модели")
     }
+
+    onVisibleChanged: {
+        if (visible)
+            loadSchoolData()
+    }
+
+    onSchoolIdChanged: loadSchoolData()
 
     header: ToolBar {
         ToolButton {
             text: "Назад"
             onClicked: {
+                appState.roomModel = null
+                appState.teacherModel = null
+                appState.classModel = null
+                appState.lessonModel = null
+
+                appState.timetableModel.setRoomModel(null)
+                appState.timetableModel.setLessonModel(null)
+                appState.timetableModel.setRoomCount(0)
+
                 showPageRequested(0)
                 console.log("Нажата кнопка назад")
             }
