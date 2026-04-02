@@ -17,6 +17,9 @@ public:
     explicit SchoolStorage(QObject *parent = nullptr);
 
     QString storageDirectory() const;
+    QString timesheetRootDirectory() const;
+    QString timesheetDirectoryForSchool(const QString &id) const;
+    bool ensureTimesheetDirectory(const QString &id) const;
 
     bool saveSchool(const QVariantMap &schoolData);
     bool saveSchool(class School *school);
@@ -31,6 +34,8 @@ public:
 
 private:
     QString m_dir;
+    QString m_timesheetDir;
+
 };
 
 #endif // SCHOOLSTORAGE_H

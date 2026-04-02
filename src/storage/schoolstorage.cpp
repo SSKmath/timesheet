@@ -20,8 +20,36 @@ SchoolStorage::SchoolStorage(QObject *parent) : QObject(parent)
         dir.mkpath(".");
     if (!dir.exists("schools"))
         dir.mkdir("schools");
+    if (!dir.exists("timesheet"))
+        dir.mkdir("timesheet");
+
     m_dir = dir.filePath("schools");
+    m_timesheetDir = dir.filePath("timesheet");
+
     qDebug() << "Школы хранятся в" << m_dir;
+    qDebug() << "Расписания хранятся в" << m_timesheetDir;
+}
+
+QString SchoolStorage::timesheetRootDirectory() const
+{
+    return m_timesheetDir;
+}
+
+QString SchoolStorage::timesheetDirectoryForSchool(const QString &id) const
+{
+    return QDir(m_timesheetDir).filePath(id);
+}
+
+bool SchoolStorage::ensureTimesheetDirectory(const QString &id) const
+{
+    if (id.isEmpty())
+        return false;
+
+    QDir dir(m_timesheetDir);
+    if (dir.exists(id))
+        return true;
+
+    return dir.mkpath(id);
 }
 
 QString SchoolStorage::storageDirectory() const

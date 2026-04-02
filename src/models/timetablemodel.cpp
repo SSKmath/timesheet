@@ -4,6 +4,19 @@
 #include <QDebug>
 #include "lesson.h"
 #include "lessonmodel.h"
+#include "school.h"
+#include <QDateTime>
+#include <QDir>
+#include <QFile>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QSaveFile>
+#include <QStandardPaths>
+#include <map>
+#include <set>
+#include <vector>
+
 
 TimetableModel::TimetableModel(QObject *parent)
     : QAbstractTableModel(parent),
@@ -13,6 +26,187 @@ TimetableModel::TimetableModel(QObject *parent)
     m_lessonModel(nullptr),
     m_lessonUsageRevision(0)
 {
+}
+
+QString TimetableModel::baseStoragePath() const
+{
+    return QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+}
+
+QString TimetableModel::schoolTimesheetDirPath(const QString &schoolId) const
+{
+    return QDir(baseStoragePath() + "/timesheet").filePath(schoolId);
+}
+
+QString TimetableModel::autosaveFilePath(const QString &schoolId) const
+{
+    return QDir(schoolTimesheetDirPath(schoolId)).filePath("autosave.json");
+}
+
+bool TimetableModel::ensureSchoolTimesheetDir(const QString &schoolId) const
+{
+    if (schoolId.isEmpty())
+        return false;
+
+    QDir baseDir(baseStoragePath());
+    if (!baseDir.exists() && !baseDir.mkpath("."))
+        return false;
+
+    if (!baseDir.exists("timesheet") && !baseDir.mkdir("timesheet"))
+        return false;
+
+    QDir timesheetRoot(baseDir.filePath("timesheet"));
+    if (timesheetRoot.exists(schoolId))
+        return true;
+
+    return timesheetRoot.mkpath(schoolId);
+}
+
+QString TimetableModel::currentSchoolId() const
+{
+    QObject *owner = nullptr;
+
+    if (m_roomModel)
+        owner = m_roomModel->parent();
+
+    if (!owner && m_lessonModel)
+        owner = m_lessonModel->parent();
+
+    School *school = qobject_cast<School *>(owner);
+    if (!school)
+        return QString();
+
+    return school->id();
+}
+
+void TimetableModel::saveToStorage() const
+{
+    if (m_loadingFromStorage || m_suspendAutosave)
+        return;
+
+    if (m_roomCount <= 0 || m_slotCount <= 0)
+        return;
+
+    const QString schoolId = currentSchoolId();
+    if (schoolId.isEmpty())
+        return;
+
+    if (!ensureSchoolTimesheetDir(schoolId))
+    {
+        qWarning() << "Не удалось создать папку для расписания школы" << schoolId;
+        return;
+    }
+
+    QJsonObject root;
+    root["schoolId"] = schoolId;
+    root["roomCount"] = m_roomCount;
+    root["slotCount"] = m_slotCount;
+    root["savedAt"] = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
+
+    QJsonArray cellsArray;
+    for (int row = 0; row < m_slotCount; ++row)
+    {
+        for (int column = 0; column < m_roomCount; ++column)
+        {
+            const LessonAssignment &cell = m_cells[cellIndex(row, column)];
+            if (cell.lessonId.isEmpty() && cell.lessonName.isEmpty())
+                continue;
+
+            QJsonObject obj;
+            obj["row"] = row;
+            obj["column"] = column;
+            obj["lessonId"] = cell.lessonId;
+            obj["lessonName"] = cell.lessonName;
+            cellsArray.append(obj);
+        }
+    }
+
+    root["cells"] = cellsArray;
+
+    const QByteArray json = QJsonDocument(root).toJson(QJsonDocument::Indented);
+    const QString path = autosaveFilePath(schoolId);
+
+    QSaveFile file(path);
+    if (!file.open(QIODevice::WriteOnly))
+    {
+        qWarning() << "Не удалось открыть файл расписания для записи:" << path;
+        return;
+    }
+
+    if (file.write(json) == -1)
+    {
+        qWarning() << "Ошибка записи расписания:" << path;
+        file.cancelWriting();
+        return;
+    }
+
+    if (!file.commit())
+    {
+        qWarning() << "Не удалось зафиксировать файл расписания:" << path;
+        return;
+    }
+}
+
+void TimetableModel::tryLoadFromStorage()
+{
+    if (m_loadingFromStorage)
+        return;
+
+    if (m_roomCount <= 0 || m_slotCount <= 0)
+        return;
+
+    const QString schoolId = currentSchoolId();
+    if (schoolId.isEmpty())
+        return;
+
+    const QString signature = schoolId + "|" +
+                              QString::number(m_roomCount) + "|" +
+                              QString::number(m_slotCount);
+
+    if (m_loadedSignature == signature)
+        return;
+
+    ensureSchoolTimesheetDir(schoolId);
+
+    QList<LessonAssignment> loadedCells;
+    loadedCells.resize(m_roomCount * m_slotCount);
+
+    QFile file(autosaveFilePath(schoolId));
+    if (file.exists() && file.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        const QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+        if (doc.isObject())
+        {
+            const QJsonArray cellsArray = doc.object().value("cells").toArray();
+            for (const QJsonValue &value : cellsArray)
+            {
+                const QJsonObject obj = value.toObject();
+                const int row = obj.value("row").toInt(-1);
+                const int column = obj.value("column").toInt(-1);
+
+                if (row < 0 || row >= m_slotCount || column < 0 || column >= m_roomCount)
+                    continue;
+
+                LessonAssignment assignment;
+                assignment.lessonId = obj.value("lessonId").toString();
+                assignment.lessonName = obj.value("lessonName").toString();
+
+                loadedCells[row * m_roomCount + column] = assignment;
+            }
+        }
+    }
+
+    m_loadingFromStorage = true;
+
+    beginResetModel();
+    m_cells = loadedCells;
+    endResetModel();
+
+    m_loadingFromStorage = false;
+    m_loadedSignature = signature;
+
+    ++m_lessonUsageRevision;
+    emit lessonUsageChanged();
 }
 
 bool TimetableModel::isValidCell(int row, int column) const
@@ -137,7 +331,6 @@ bool TimetableModel::placeLesson(int row, int column, const QString &lessonId, c
 
     const int targetPos = cellIndex(row, column);
 
-    // Ищем, не стоит ли этот же урок уже в другой ячейке
     int oldPos = -1;
     for (int i = 0; i < m_cells.size(); ++i) {
         if (m_cells[i].lessonId == lessonId) {
@@ -146,7 +339,6 @@ bool TimetableModel::placeLesson(int row, int column, const QString &lessonId, c
         }
     }
 
-    // Если урок уже был в другой ячейке — очищаем старую ячейку
     if (oldPos >= 0 && oldPos != targetPos) {
         const int oldRow = oldPos / m_roomCount;
         const int oldCol = oldPos % m_roomCount;
@@ -158,7 +350,6 @@ bool TimetableModel::placeLesson(int row, int column, const QString &lessonId, c
                          {LessonIdRole, LessonNameRole});
     }
 
-    // Если в целевой ячейке был другой урок — просто перезапишем его
     m_cells[targetPos].lessonId = lessonId;
     m_cells[targetPos].lessonName = lessonName;
 
@@ -167,10 +358,7 @@ bool TimetableModel::placeLesson(int row, int column, const QString &lessonId, c
 
     ++m_lessonUsageRevision;
     emit lessonUsageChanged();
-
-    /*for (auto x : m_cells)
-        qDebug() << x.lessonId << ' ' << x.lessonName << "  ";
-    qDebug() << '\n';*/
+    saveToStorage();
 
     return true;
 }
@@ -193,6 +381,7 @@ bool TimetableModel::clearLesson(int row, int column)
 
     ++m_lessonUsageRevision;
     emit lessonUsageChanged();
+    saveToStorage();
 
     return true;
 }
@@ -208,8 +397,12 @@ void TimetableModel::setRoomCount(int count)
     m_cells.resize(m_roomCount * m_slotCount);
     endResetModel();
 
+    m_loadedSignature.clear();
+
     ++m_lessonUsageRevision;
     emit lessonUsageChanged();
+
+    tryLoadFromStorage();
 }
 
 void TimetableModel::setSlotCount(int count)
@@ -223,18 +416,26 @@ void TimetableModel::setSlotCount(int count)
     m_cells.resize(m_roomCount * m_slotCount);
     endResetModel();
 
+    m_loadedSignature.clear();
+
     ++m_lessonUsageRevision;
     emit lessonUsageChanged();
+
+    tryLoadFromStorage();
 }
 
 void TimetableModel::setRoomModel(QObject *roomModel)
 {
     m_roomModel = roomModel;
+    m_loadedSignature.clear();
+    tryLoadFromStorage();
 }
 
 void TimetableModel::setLessonModel(QObject *lessonModel)
 {
     m_lessonModel = lessonModel;
+    m_loadedSignature.clear();
+    tryLoadFromStorage();
 }
 
 using namespace std;
@@ -278,9 +479,14 @@ vector<pair<int, int>> kuhn(QList<Lesson*> &lessons)
     return match;
 }
 
-Q_INVOKABLE void TimetableModel::generate()
+void TimetableModel::generate()
 {
+    if (!m_lessonModel)
+        return;
+
     qDebug() << "generating";
+
+    m_suspendAutosave = true;
 
     QList<Lesson*> lessons = qobject_cast<LessonModel *>(m_lessonModel)->lessons();
 
@@ -299,11 +505,13 @@ Q_INVOKABLE void TimetableModel::generate()
 
             QString name;
             for (Lesson *les : lessons)
+            {
                 if (les->id() == match[i].second)
                 {
                     name = les->name();
                     break;
                 }
+            }
 
             placeLesson(row, cnt++, QString::number(match[i].second), name);
             deleted.insert(match[i].second);
@@ -318,6 +526,9 @@ Q_INVOKABLE void TimetableModel::generate()
         }
         lessons = newLessons;
     }
+
+    m_suspendAutosave = false;
+    saveToStorage();
 
     qDebug() << "end generating";
 }

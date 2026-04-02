@@ -10,6 +10,9 @@ SchoolModel::SchoolModel(QObject *parent) : QAbstractListModel(parent)
     {
         School *s = new School(m.value("id").toString(), m.value("name").toString(), this);
 
+        if (m_storage)
+            m_storage->ensureTimesheetDirectory(s->id());
+
         QVariantList rooms = m.value("rooms").toList();
         RoomModel *rm = qobject_cast<RoomModel*>(s->roomsModel());
         for (const QVariant &rv : std::as_const(rooms))
@@ -161,6 +164,9 @@ void SchoolModel::addSchoolFromVariant(const QString &name, const QVariantList &
     beginInsertRows(QModelIndex(), m_schools.count(), m_schools.count());
 
     School *s = new School(QString(), name, this);
+
+    if (m_storage)
+        m_storage->ensureTimesheetDirectory(s->id());
 
     RoomModel *rm = qobject_cast<RoomModel*>(s->roomsModel());
     if (rm)
