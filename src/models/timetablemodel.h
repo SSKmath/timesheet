@@ -4,6 +4,7 @@
 #include <QAbstractTableModel>
 #include <QList>
 #include <QString>
+#include <QMetaObject>
 
 struct LessonAssignment {
     QString lessonId;
@@ -82,6 +83,11 @@ private:
     QString m_loadedSignature;
     bool m_loadingFromStorage = false;
     bool m_suspendAutosave = false;
+
+    QMetaObject::Connection m_roomRowsInsertedConnection;
+    QMetaObject::Connection m_roomRowsRemovedConnection;
+    QMetaObject::Connection m_roomModelResetConnection;
+    QMetaObject::Connection m_roomDataChangedConnection;
 };
 
 #endif // TIMETABLEMODEL_H

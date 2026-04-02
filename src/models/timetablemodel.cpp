@@ -388,21 +388,40 @@ bool TimetableModel::clearLesson(int row, int column)
 
 void TimetableModel::setRoomCount(int count)
 {
-    if (count < 0)
+    if (count < 0 || count == m_roomCount)
         return;
 
+    QList<LessonAssignment> oldCells = m_cells;
+    int oldRoomCount = m_roomCount;
+    int oldSlotCount = m_slotCount;
+
     beginResetModel();
+
     m_roomCount = count;
     m_cells.clear();
     m_cells.resize(m_roomCount * m_slotCount);
-    endResetModel();
 
-    m_loadedSignature.clear();
+    int copyRows = qMin(oldSlotCount, m_slotCount);
+    int copyCols = qMin(oldRoomCount, m_roomCount);
+
+    for (int row = 0; row < copyRows; ++row)
+    {
+        for (int col = 0; col < copyCols; ++col)
+        {
+            m_cells[row * m_roomCount + col] =
+                oldCells[row * oldRoomCount + col];
+        }
+    }
+
+    endResetModel();
 
     ++m_lessonUsageRevision;
     emit lessonUsageChanged();
 
-    tryLoadFromStorage();
+    if (m_roomCount > 0)
+        emit headerDataChanged(Qt::Horizontal, 0, m_roomCount - 1);
+
+    saveToStorage();
 }
 
 void TimetableModel::setSlotCount(int count)
@@ -426,9 +445,58 @@ void TimetableModel::setSlotCount(int count)
 
 void TimetableModel::setRoomModel(QObject *roomModel)
 {
+    if (m_roomModel == roomModel)
+        return;
+
+    QObject::disconnect(m_roomRowsInsertedConnection);
+    QObject::disconnect(m_roomRowsRemovedConnection);
+    QObject::disconnect(m_roomModelResetConnection);
+    QObject::disconnect(m_roomDataChangedConnection);
+
     m_roomModel = roomModel;
-    m_loadedSignature.clear();
-    tryLoadFromStorage();
+
+    QAbstractItemModel *model = qobject_cast<QAbstractItemModel *>(m_roomModel);
+    if (!model)
+        return;
+
+    setRoomCount(model->rowCount());
+
+    m_roomRowsInsertedConnection = QObject::connect(
+        model, &QAbstractItemModel::rowsInserted,
+        this,
+        [this, model](const QModelIndex &, int, int)
+        {
+            setRoomCount(model->rowCount());
+        }
+        );
+
+    m_roomRowsRemovedConnection = QObject::connect(
+        model, &QAbstractItemModel::rowsRemoved,
+        this,
+        [this, model](const QModelIndex &, int, int)
+        {
+            setRoomCount(model->rowCount());
+        }
+        );
+
+    m_roomModelResetConnection = QObject::connect(
+        model, &QAbstractItemModel::modelReset,
+        this,
+        [this, model]()
+        {
+            setRoomCount(model->rowCount());
+        }
+        );
+
+    m_roomDataChangedConnection = QObject::connect(
+        model, &QAbstractItemModel::dataChanged,
+        this,
+        [this](const QModelIndex &, const QModelIndex &, const QList<int> &)
+        {
+            if (m_roomCount > 0)
+                emit headerDataChanged(Qt::Horizontal, 0, m_roomCount - 1);
+        }
+        );
 }
 
 void TimetableModel::setLessonModel(QObject *lessonModel)
