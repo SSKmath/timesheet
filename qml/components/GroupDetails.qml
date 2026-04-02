@@ -144,6 +144,8 @@ Page {
                             }
 
                             displayText: {
+                                if (!teacherModel)
+                                    return "";
                                 var teacher = teacherModel.teacherById(teacherId)
                                 return teacher ? teacher.surname + " " + teacher.name[0] + ". " + teacher.patronymic[0] + "." : "Не выбран"
                             }

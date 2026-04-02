@@ -4,6 +4,7 @@
 #include <QAbstractTableModel>
 #include <QList>
 #include <QString>
+#include <QMetaObject>
 
 struct LessonAssignment {
     QString lessonId;
@@ -63,6 +64,14 @@ private:
     bool isValidCell(int row, int column) const;
     int cellIndex(int row, int column) const;
 
+    void saveToStorage() const;
+    void tryLoadFromStorage();
+    QString currentSchoolId() const;
+    QString baseStoragePath() const;
+    QString schoolTimesheetDirPath(const QString &schoolId) const;
+    QString autosaveFilePath(const QString &schoolId) const;
+    bool ensureSchoolTimesheetDir(const QString &schoolId) const;
+
     int m_roomCount;
     int m_slotCount;
     QList<LessonAssignment> m_cells;
@@ -70,6 +79,16 @@ private:
     QObject *m_lessonModel;
 
     int m_lessonUsageRevision = 0;
+
+    QString m_loadedSignature;
+    bool m_loadingFromStorage = false;
+    bool m_suspendAutosave = false;
+    QString m_loadedSchoolId;
+
+    QMetaObject::Connection m_roomRowsInsertedConnection;
+    QMetaObject::Connection m_roomRowsRemovedConnection;
+    QMetaObject::Connection m_roomModelResetConnection;
+    QMetaObject::Connection m_roomDataChangedConnection;
 };
 
 #endif // TIMETABLEMODEL_H

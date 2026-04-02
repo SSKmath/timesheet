@@ -161,7 +161,7 @@ QObject* TeacherModel::teacherById(int id) const
         if (tp->id() == id)
             return tp;
     }
-    // потом написать, что будет, если не нашёлся учитель
+    return nullptr;
 }
 
 int TeacherModel::indexById(int id) const
