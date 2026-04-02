@@ -438,7 +438,6 @@ QString SchoolModel::generateTimetablePdf(int index)
         QVector<QHash<int, int>>(DAYS)
         );
 
-    // ---------- teachers ----------
     QHash<int, QVector<bool>> teacherDays;
     QHash<int, QString> teacherShort;
     QHash<int, QVector<QVector<bool>>> teacherBusy;
