@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import "components"
+import App 1.0
 
 ApplicationWindow {
     id: root
@@ -12,12 +13,14 @@ ApplicationWindow {
 
     QtObject {
         id: appState
+        property var roomModel: null
         property var teacherModel: null
         property int teacherIndex: -1
         property bool teacherIsNew: false
         property var classModel: null
         property var schoolclassModel: null
         property var lessonModel: null
+        property var timetableModel: TimetableModel {}
     }
 
     property int currentPage: 0
@@ -54,6 +57,13 @@ ApplicationWindow {
     GroupDetails {
         id: groupDetails
         visible: currentPage === 4
+        anchors.fill: parent
+        onShowPageRequested: (pageIndex) => showPage(pageIndex)
+    }
+
+    TimetableDetails {
+        id: timetableDetails
+        visible: currentPage === 5
         anchors.fill: parent
         onShowPageRequested: (pageIndex) => showPage(pageIndex)
     }

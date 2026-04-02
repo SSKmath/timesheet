@@ -2,6 +2,7 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include "src/models/schoolmodel.h"
+#include "src/models/timetablemodel.h"
 
 int main(int argc, char *argv[])
 {
@@ -11,6 +12,8 @@ int main(int argc, char *argv[])
 
     SchoolModel *schoolModel = new SchoolModel(&engine);
     engine.rootContext()->setContextProperty("schoolModel", schoolModel);
+
+    qmlRegisterType<TimetableModel>("App", 1, 0, "TimetableModel");
 
     engine.loadFromModule("timesheet", "Main");
     if (engine.rootObjects().isEmpty())

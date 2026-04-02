@@ -19,12 +19,21 @@ Page {
             if (schoolData) {
                 schoolName = schoolData.name
                 roomModel = schoolModel.roomModelAt(schoolId)
+                appState.roomModel = roomModel
                 teacherModel = schoolModel.teacherModelAt(schoolId)
                 appState.teacherModel = teacherModel
                 classModel = schoolModel.classModelAt(schoolId)
                 appState.classModel = classModel
                 lessonModel = schoolModel.lessonModelAt(schoolId)
                 appState.lessonModel = lessonModel
+
+                // Указываем модели кабинетов (RoomModel) в TimetableModel
+                appState.timetableModel.setRoomModel(roomModel);
+                appState.timetableModel.setLessonModel(lessonModel);
+                // Задаем число кабинетов и слотов (5 дней × 8 уроков)
+                appState.timetableModel.setRoomCount(roomModel.rowCount());
+                appState.timetableModel.setSlotCount(5 * 8);
+
                 console.log("Загружена школа:", schoolName, "с комнатами из C++ модели")
             }
         }
@@ -44,6 +53,15 @@ Page {
             font.pointSize: 16
             font.bold: true
             anchors.centerIn: parent
+        }
+
+        Button {
+            text: "Расписание"
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            onClicked: {
+                showPageRequested(5)
+            }
         }
     }
 

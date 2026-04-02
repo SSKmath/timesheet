@@ -25,6 +25,7 @@ public:
     Q_INVOKABLE void removeAt(int index);
     Q_INVOKABLE int count() const;
     Q_INVOKABLE QObject *classAt(int index) const;
+    Q_INVOKABLE QObject *classById(int id) const;
 
     void appendClassWithId(int id, const QString &name);
 
