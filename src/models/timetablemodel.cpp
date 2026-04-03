@@ -542,7 +542,7 @@ vector<pair<int, int>> kuhn(QList<Lesson*> &lessons)
         g[pl->teacherId()].push_back({pl->classes()[0], pl->id()});
     }
 
-    vector<pair<int, int>> match(100, {-1, -1});
+    vector<pair<int, int>> match(500, {-1, -1});
 
     for (auto [v, classes] : g)
     {
@@ -556,50 +556,166 @@ vector<pair<int, int>> kuhn(QList<Lesson*> &lessons)
 
 void TimetableModel::generate()
 {
-    if (!m_lessonModel)
+    if (!m_lessonModel || m_roomCount <= 0 || m_slotCount <= 0)
         return;
 
     qDebug() << "generating";
 
     m_suspendAutosave = true;
 
-    QList<Lesson*> lessons = qobject_cast<LessonModel *>(m_lessonModel)->lessons();
+    LessonModel *lessonModel = qobject_cast<LessonModel *>(m_lessonModel);
+    if (!lessonModel)
+    {
+        m_suspendAutosave = false;
+        return;
+    }
+
+    QList<Lesson*> lessons = lessonModel->lessons();
+
+    map<int, Lesson*> lessonById;
+    for (Lesson *lesson : lessons)
+    {
+        if (!lesson)
+            continue;
+
+        lessonById[lesson->id()] = lesson;
+    }
+
+    QList<Lesson*> remainingLessons;
+    for (Lesson *lesson : lessons)
+    {
+        if (!lesson)
+            continue;
+
+        if (isLessonUsed(QString::number(lesson->id())))
+            continue;
+
+        if (lesson->classes().isEmpty())
+            continue;
+
+        remainingLessons.push_back(lesson);
+    }
+
+    lessons = remainingLessons;
 
     int row = 0;
-    while (lessons.size() > 0)
+    while (row < m_slotCount && lessons.size() > 0)
     {
-        qDebug() << lessons.size();
-        vector<pair<int, int>> match = kuhn(lessons);
+        set<int> usedTeachers;
+        set<int> usedClasses;
+
+        for (int column = 0; column < m_roomCount; ++column)
+        {
+            const LessonAssignment &cell = m_cells[cellIndex(row, column)];
+            if (cell.lessonId.isEmpty() && cell.lessonName.isEmpty())
+                continue;
+
+            bool ok = false;
+            const int lessonId = cell.lessonId.toInt(&ok);
+            if (!ok)
+                continue;
+
+            auto it = lessonById.find(lessonId);
+            if (it == lessonById.end() || !it->second)
+                continue;
+
+            Lesson *lesson = it->second;
+
+            usedTeachers.insert(lesson->teacherId());
+
+            if (!lesson->classes().isEmpty())
+                usedClasses.insert(lesson->classes()[0]);
+        }
+
+        QList<Lesson*> availableLessons;
+        for (Lesson *lesson : lessons)
+        {
+            if (!lesson)
+                continue;
+
+            if (usedTeachers.count(lesson->teacherId()) != 0)
+                continue;
+
+            if (lesson->classes().isEmpty())
+                continue;
+
+            if (usedClasses.count(lesson->classes()[0]) != 0)
+                continue;
+
+            availableLessons.push_back(lesson);
+        }
+
+        int freeCells = 0;
+        for (int column = 0; column < m_roomCount; ++column)
+        {
+            const LessonAssignment &cell = m_cells[cellIndex(row, column)];
+            if (cell.lessonId.isEmpty() && cell.lessonName.isEmpty())
+                ++freeCells;
+        }
+
+        if (freeCells <= 0 || availableLessons.isEmpty())
+        {
+            ++row;
+            continue;
+        }
+
+        vector<pair<int, int>> match = kuhn(availableLessons);
 
         set<int> deleted;
-        int cnt = 0;
-        for (int i = 0; cnt < m_roomCount && i < match.size(); ++i)
+        int placed = 0;
+        int column = 0;
+
+        for (int i = 0; placed < freeCells && i < (int)match.size(); ++i)
         {
             if (match[i].first == -1)
                 continue;
 
-            QString name;
-            for (Lesson *les : lessons)
+            int lessonId = match[i].second;
+            Lesson *lesson = nullptr;
+
+            for (Lesson *les : availableLessons)
             {
-                if (les->id() == match[i].second)
+                if (les && les->id() == lessonId)
                 {
-                    name = les->name();
+                    lesson = les;
                     break;
                 }
             }
 
-            placeLesson(row, cnt++, QString::number(match[i].second), name);
-            deleted.insert(match[i].second);
+            if (!lesson)
+                continue;
+
+            while (column < m_roomCount)
+            {
+                const LessonAssignment &cell = m_cells[cellIndex(row, column)];
+                if (cell.lessonId.isEmpty() && cell.lessonName.isEmpty())
+                    break;
+
+                ++column;
+            }
+
+            if (column >= m_roomCount)
+                break;
+
+            placeLesson(row, column, QString::number(lesson->id()), lesson->name());
+            deleted.insert(lesson->id());
+
+            ++placed;
+            ++column;
         }
-        row++;
 
         QList<Lesson*> newLessons;
-        for (int i = 0; i < lessons.size(); ++i)
+        for (Lesson *lesson : lessons)
         {
-            if (!deleted.count(lessons[i]->id()))
-                newLessons.push_back(lessons[i]);
+            if (!lesson)
+                continue;
+
+            if (!deleted.count(lesson->id()))
+                newLessons.push_back(lesson);
         }
+
         lessons = newLessons;
+        ++row;
     }
 
     m_suspendAutosave = false;
