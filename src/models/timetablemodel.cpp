@@ -542,7 +542,7 @@ vector<pair<int, int>> kuhn(QList<Lesson*> &lessons)
         g[pl->teacherId()].push_back({pl->classes()[0], pl->id()});
     }
 
-    vector<pair<int, int>> match(100, {-1, -1});
+    vector<pair<int, int>> match(500, {-1, -1});
 
     for (auto [v, classes] : g)
     {
@@ -572,7 +572,7 @@ void TimetableModel::generate()
 
     QList<Lesson*> lessons = lessonModel->lessons();
 
-    std::map<int, Lesson*> lessonById;
+    map<int, Lesson*> lessonById;
     for (Lesson *lesson : lessons)
     {
         if (!lesson)
