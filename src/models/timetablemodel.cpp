@@ -260,9 +260,6 @@ bool TimetableModel::setData(const QModelIndex &index, const QVariant &value, in
 {
     if (!index.isValid() || role != LessonIdRole)
         return false;
-
-    // Для совместимости с обычным редактированием через model.setData()
-    // считаем, что lessonName = lessonId.
     return placeLesson(index.row(), index.column(), value.toString(), value.toString());
 }
 
@@ -513,9 +510,7 @@ void TimetableModel::setLessonModel(QObject *lessonModel)
     tryLoadFromStorage();
 }
 
-using namespace std;
-
-bool augment(int v, map<int, bool> &used, map<int, vector<pair<int, int>>> &g, vector<pair<int, int>> &match)
+bool augment(int v, std::map<int, bool> &used, std::map<int, std::vector<std::pair<int, int>>> &g, std::vector<std::pair<int, int>> &match)
 {
     if (used[v])
         return false;
@@ -532,17 +527,17 @@ bool augment(int v, map<int, bool> &used, map<int, vector<pair<int, int>>> &g, v
     return false;
 }
 
-vector<pair<int, int>> kuhn(QList<Lesson*> &lessons)
+std::vector<std::pair<int, int>> kuhn(QList<Lesson*> &lessons)
 {
-    map<int, vector<pair<int, int>>> g;
-    map<int, bool> used;
+    std::map<int, std::vector<std::pair<int, int>>> g;
+    std::map<int, bool> used;
     for (Lesson *pl : lessons)
     {
         used[pl->teacherId()] = false;
         g[pl->teacherId()].push_back({pl->classes()[0], pl->id()});
     }
 
-    vector<pair<int, int>> match(500, {-1, -1});
+    std::vector<std::pair<int, int>> match(500, {-1, -1});
 
     for (auto [v, classes] : g)
     {
@@ -572,7 +567,7 @@ void TimetableModel::generate()
 
     QList<Lesson*> lessons = lessonModel->lessons();
 
-    map<int, Lesson*> lessonById;
+    std::map<int, Lesson*> lessonById;
     for (Lesson *lesson : lessons)
     {
         if (!lesson)
@@ -601,8 +596,8 @@ void TimetableModel::generate()
     int row = 0;
     while (row < m_slotCount && lessons.size() > 0)
     {
-        set<int> usedTeachers;
-        set<int> usedClasses;
+        std::set<int> usedTeachers;
+        std::set<int> usedClasses;
 
         for (int column = 0; column < m_roomCount; ++column)
         {
@@ -659,9 +654,9 @@ void TimetableModel::generate()
             continue;
         }
 
-        vector<pair<int, int>> match = kuhn(availableLessons);
+        std::vector<std::pair<int, int>> match = kuhn(availableLessons);
 
-        set<int> deleted;
+        std::set<int> deleted;
         int placed = 0;
         int column = 0;
 

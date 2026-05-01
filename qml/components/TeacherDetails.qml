@@ -192,7 +192,6 @@ Page {
             Button {
                 text: "Добавить предмет"
                 onClicked: {
-                    //showPageRequested()
                     console.log("Нажата кнопка добавления предмета");
                 }
             }
@@ -227,9 +226,9 @@ Page {
                 console.log(data)
                 appState.teacherModel.setData(appState.teacherModel.index(appState.teacherIndex, 0), data.surname, 0)
                 appState.teacherModel.setData(appState.teacherModel.index(appState.teacherIndex, 0), data.name, 1)
-                appState.teacherModel.setData(appState.teacherModel.index(appState.teacherIndex, 0), data.patronymic, 2) // жёсткие костыли,
-                appState.teacherModel.setData(appState.teacherModel.index(appState.teacherIndex, 0), "subject", 3)       // я не понимаю, почему
-                appState.teacherModel.setData(appState.teacherModel.index(appState.teacherIndex, 0), data.weekdays, 4)   // роли не работают
+                appState.teacherModel.setData(appState.teacherModel.index(appState.teacherIndex, 0), data.patronymic, 2)
+                appState.teacherModel.setData(appState.teacherModel.index(appState.teacherIndex, 0), "subject", 3)
+                appState.teacherModel.setData(appState.teacherModel.index(appState.teacherIndex, 0), data.weekdays, 4)
                 showPageRequested(2)
             }
         }

@@ -456,4 +456,3 @@ bool SchoolStorage::removeSchool(const QString &id)
         return f.remove();
     return true;
 }
-//посхалка

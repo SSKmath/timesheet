@@ -112,7 +112,7 @@ Page {
                             enabled: perWeek > 1
                             onClicked: {
                                 var ind = subjectListView.model.index(index, 0)
-                                lessonModel.setData(ind, perWeek - 1, 5) // Всё ещё не понимаю, как работают роли
+                                lessonModel.setData(ind, perWeek - 1, 5)
                             }
                         }
 
@@ -130,7 +130,7 @@ Page {
                             enabled: perWeek < 99
                             onClicked: {
                                 var ind = subjectListView.model.index(index, 0)
-                                lessonModel.setData(ind, perWeek + 1, 5) // Всё ещё не понимаю, как работают роли
+                                lessonModel.setData(ind, perWeek + 1, 5)
                             }
                         }
 
@@ -211,7 +211,7 @@ Page {
                         var teacher = model.teacherAt(currentIndex)
                         return teacher.surname + " " + (teacher.name ? teacher.name[0] + "." : "") +(teacher.patronymic ? " " + teacher.patronymic[0] + "." : "")
                     }
-                    return "Выберите преподавателя" // почему-то это никогда не выводится
+                    return "Выберите преподавателя"
                 }
 
                 delegate: ItemDelegate {

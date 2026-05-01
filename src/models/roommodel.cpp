@@ -24,8 +24,7 @@ QVariant RoomModel::data(const QModelIndex &index, int role) const
 
 bool RoomModel::setData(const QModelIndex &index, const QVariant &value, int role)
 {
-    role += Qt::UserRole; //когда-нибудь: понять, почему qml передаёт считая с 1
-    //qDebug() << "RoomsModel::setData row=" << index.row() << "value=" << value << "role=" << role << "SizeRole=" << SizeRole;
+    role += Qt::UserRole;
 
     if (!index.isValid() || index.row() < 0 || index.row() >= m_rooms.count())
         return false;
@@ -96,10 +95,8 @@ int RoomModel::count() const
 
 QString RoomModel::roomNameAt(int index) const
 {
-    // Проверяем границы, чтобы не упасть на несуществующем элементе
     if (index < 0 || index >= m_rooms.size() || !m_rooms[index])
         return QString();
-    return m_rooms[index]->name(); // я написал такой костыль, но мне кажется проще
-    // Берём значение через data(), чтобы не лезть напрямую в детали хранения
+    return m_rooms[index]->name();
     return data(this->index(index, 0), NameRole).toString();
 }

@@ -16,7 +16,6 @@ Page {
     readonly property var teacherModel: appState.teacherModel
     readonly property var classModel: appState.classModel
 
-    // Сейчас выбранный урок из списка
     property string selectedLessonId: ""
     property string selectedLessonName: ""
 

@@ -14,9 +14,6 @@ struct LessonAssignment {
 class TimetableModel : public QAbstractTableModel
 {
     Q_OBJECT
-
-    // Эта "ревизия" нужна, чтобы QML понял:
-    // "список использованных/неиспользованных уроков изменился, пересчитай bindings"
     Q_PROPERTY(int lessonUsageRevision READ lessonUsageRevision NOTIFY lessonUsageChanged)
 
 public:
@@ -42,15 +39,10 @@ public:
     Q_INVOKABLE void setRoomModel(QObject *roomModel);
     Q_INVOKABLE void setLessonModel(QObject *lessonModel);
 
-    // Главный метод: поставить урок в конкретную ячейку
-    Q_INVOKABLE bool placeLesson(int row, int column,
-                                 const QString &lessonId,
-                                 const QString &lessonName);
+    Q_INVOKABLE bool placeLesson(int row, int column, const QString &lessonId, const QString &lessonName);
 
-    // Очистить ячейку
     Q_INVOKABLE bool clearLesson(int row, int column);
 
-    // Проверить, используется ли урок уже в таблице
     Q_INVOKABLE bool isLessonUsed(const QString &lessonId) const;
 
     Q_INVOKABLE void generate();

@@ -12,8 +12,6 @@ int TeacherModel::rowCount(const QModelIndex &parent) const
 
 QVariant TeacherModel::data(const QModelIndex &index, int role) const
 {
-   // role += Qt::UserRole; // костыль
-
     if (!index.isValid() || index.row() < 0 || index.row() >= m_teachers.count())
         return QVariant();
     Teacher *t = m_teachers.at(index.row());
@@ -50,7 +48,7 @@ bool TeacherModel::setData(const QModelIndex &index, const QVariant &value, int 
     case 1:
         t->setName(value.toString());
         break;
-    case 2:                                        // жёсткие костыли, не понимаю, почему роли не работают
+    case 2:
         t->setPatronymic(value.toString());
         break;
     case 4:
