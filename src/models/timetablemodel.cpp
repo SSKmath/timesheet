@@ -13,11 +13,13 @@
 #include <QJsonObject>
 #include <QSaveFile>
 #include <QStandardPaths>
+#include <QRandomGenerator>
 #include <map>
 #include <set>
 #include <vector>
 #include <algorithm>
 #include <functional>
+#include <random>
 
 
 TimetableModel::TimetableModel(QObject *parent)
@@ -560,6 +562,16 @@ void TimetableModel::setLessonModel(QObject *lessonModel)
 // Вспомогательные структуры и функции
 // ============================================================
 
+template <typename T>
+static void shuffleList(QList<T> &list)
+{
+    if (list.size() < 2)
+        return;
+
+    std::mt19937 rng(static_cast<uint32_t>(QRandomGenerator::global()->generate()));
+    std::shuffle(list.begin(), list.end(), rng);
+}
+
 struct LessonInfo
 {
     Lesson *lesson = nullptr;
@@ -692,10 +704,12 @@ bool augment(int v, std::map<int, bool> &used, const std::map<int, std::vector<s
     return false;
 }
 
-QList<Lesson*> selectOneClassLessons(const QList<Lesson*> &candidates, int limit)
+QList<Lesson*> selectOneClassLessons(QList<Lesson*> &candidates, int limit)
 {
     if (limit <= 0 || candidates.isEmpty())
         return {};
+
+    shuffleList(candidates);
 
     std::map<int, std::vector<std::pair<int, int>>> g;
     std::map<int, bool> used;
@@ -753,80 +767,55 @@ QList<Lesson*> selectOneClassLessons(const QList<Lesson*> &candidates, int limit
 // Перебор с отсечениями для уроков с двумя классами
 // ------------------------------------------------------------
 
-void searchBestTwoClassSubset(const QVector<LessonInfo> &items, int idx, int limit, std::set<int> &usedTeachers, std::set<int> &usedClasses,
-                              QVector<int> &current, QVector<int> &best)
+static QList<Lesson*> selectTwoClassLessons(QList<Lesson*> candidates, int limit, int attempts = 32)
 {
-    if (current.size() > best.size())
-        best = current;
+    QList<Lesson*> best;
 
-    if (current.size() == limit || idx >= items.size())
-        return;
-
-    // Отсечение: даже если взять все оставшиеся элементы,
-    // текущий ответ уже нельзя улучшить.
-    if (current.size() + (items.size() - idx) <= best.size())
-        return;
-
-    // Ветка 1: пропустить текущий элемент
-    searchBestTwoClassSubset(items, idx + 1, limit, usedTeachers, usedClasses, current, best);
-
-    // Ветка 2: взять текущий элемент, если нет конфликтов
-    const LessonInfo &info = items[idx];
-    if (conflictsWithUsed(info, usedTeachers, usedClasses))
-        return;
-
-    addResources(info, usedTeachers, usedClasses);
-    current.push_back(idx);
-
-    searchBestTwoClassSubset(items, idx + 1, limit, usedTeachers, usedClasses, current, best);
-
-    current.pop_back();
-    removeResources(info, usedTeachers, usedClasses);
-}
-
-QList<Lesson*> selectTwoClassLessons(const QList<Lesson*> &candidates, int limit)
-{
     if (limit <= 0 || candidates.isEmpty())
-        return {};
+        return best;
 
-    QVector<LessonInfo> items;
-    items.reserve(candidates.size());
+    auto runOnce = [&](const QList<Lesson*> &order) -> QList<Lesson*> {
+        std::set<int> usedTeachers;
+        std::set<int> usedClasses;
+        QList<Lesson*> picked;
 
-    for (Lesson *lesson : candidates)
+        for (Lesson *lesson : order)
+        {
+            if (!lesson)
+                continue;
+
+            LessonInfo info = makeLessonInfo(lesson);
+            if (conflictsWithUsed(info, usedTeachers, usedClasses))
+                continue;
+
+            picked.push_back(lesson);
+            addResources(info, usedTeachers, usedClasses);
+
+            if (picked.size() >= limit)
+                break;
+        }
+
+        return picked;
+    };
+
+    // Первый проход без перемешивания
+    best = runOnce(candidates);
+
+    // Несколько случайных попыток
+    for (int i = 1; i < attempts; ++i)
     {
-        if (!lesson)
-            continue;
+        QList<Lesson*> shuffled = candidates;
+        shuffleList(shuffled);
 
-        const auto classes = lesson->classes();
-        if (classes.size() < 2)
-            continue;
+        QList<Lesson*> current = runOnce(shuffled);
+        if (current.size() > best.size())
+            best = current;
 
-        items.push_back(makeLessonInfo(lesson));
+        if (best.size() >= limit)
+            break;
     }
 
-    // Небольшая эвристика: сначала более "тяжёлые" элементы.
-    // Это не меняет точность, но обычно помогает отсечениям.
-    std::sort(items.begin(), items.end(), [](const LessonInfo &a, const LessonInfo &b) {
-        if (a.classIds.size() != b.classIds.size())
-            return a.classIds.size() > b.classIds.size();
-        return a.teacherId < b.teacherId;
-    });
-
-    std::set<int> usedTeachers;
-    std::set<int> usedClasses;
-    QVector<int> current;
-    QVector<int> best;
-
-    searchBestTwoClassSubset(items, 0, limit, usedTeachers, usedClasses, current, best);
-
-    QList<Lesson*> result;
-    for (int idx : best)
-    {
-        if (idx >= 0 && idx < items.size() && items[idx].lesson)
-            result.push_back(items[idx].lesson);
-    }
-
-    return result;
+    return best;
 }
 
 std::set<int> occupiedTeachersInRows(const std::map<int, Lesson*> &lessonById, const QVector<LessonAssignment> &cells,
@@ -1280,6 +1269,11 @@ void TimetableModel::generate()
     };
 
     LessonBuckets buckets = splitLessons(allLessons, isUsed);
+
+    shuffleList(buckets.doubleOneClass);
+    shuffleList(buckets.doubleTwoClass);
+    shuffleList(buckets.singleOneClass);
+    shuffleList(buckets.singleTwoClass);
 
     // Сначала двойные уроки, потом одинарные
     generateDoubleLessons(buckets, lessonById);
