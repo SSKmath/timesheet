@@ -16,6 +16,8 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <algorithm>
+#include <functional>
 
 
 TimetableModel::TimetableModel(QObject *parent)
@@ -328,7 +330,9 @@ bool TimetableModel::isLessonUsed(const QString &lessonId) const
     return false;
 }
 
-bool TimetableModel::placeLesson(int row, int column, const QString &lessonId, const QString &lessonName)
+bool TimetableModel::moveLessonToCell(int row, int column,
+                                      const QString &lessonId,
+                                      const QString &lessonName)
 {
     if (!isValidCell(row, column))
         return false;
@@ -336,14 +340,17 @@ bool TimetableModel::placeLesson(int row, int column, const QString &lessonId, c
     const int targetPos = cellIndex(row, column);
 
     int oldPos = -1;
-    for (int i = 0; i < m_cells.size(); ++i) {
-        if (m_cells[i].lessonId == lessonId) {
+    for (int i = 0; i < m_cells.size(); ++i)
+    {
+        if (m_cells[i].lessonId == lessonId)
+        {
             oldPos = i;
             break;
         }
     }
 
-    if (oldPos >= 0 && oldPos != targetPos) {
+    if (oldPos >= 0 && oldPos != targetPos)
+    {
         const int oldRow = oldPos / m_roomCount;
         const int oldCol = oldPos % m_roomCount;
 
@@ -362,7 +369,42 @@ bool TimetableModel::placeLesson(int row, int column, const QString &lessonId, c
 
     ++m_lessonUsageRevision;
     emit lessonUsageChanged();
-    saveToStorage();
+
+    if (!m_suspendAutosave)
+        saveToStorage();
+
+    return true;
+}
+
+bool TimetableModel::placeLesson(int row, int column,
+                                 const QString &lessonId,
+                                 const QString &lessonName)
+{
+    return moveLessonToCell(row, column, lessonId, lessonName);
+}
+
+bool TimetableModel::setLessonAtCell(int row, int column,
+                                     const QString &lessonId,
+                                     const QString &lessonName)
+{
+    if (!isValidCell(row, column))
+        return false;
+
+    const int pos = cellIndex(row, column);
+
+    m_cells[pos].lessonId = lessonId;
+    m_cells[pos].lessonName = lessonName;
+
+    emit dataChanged(index(row, column), index(row, column),
+                     {LessonIdRole, LessonNameRole});
+
+    ++m_lessonUsageRevision;
+    emit lessonUsageChanged();
+
+    // Во время генерации лучше не сохранять каждый раз.
+    // Тогда generate() может ставить m_suspendAutosave = true.
+    if (!m_suspendAutosave)
+        saveToStorage();
 
     return true;
 }
@@ -510,43 +552,701 @@ void TimetableModel::setLessonModel(QObject *lessonModel)
     tryLoadFromStorage();
 }
 
-bool augment(int v, std::map<int, bool> &used, std::map<int, std::vector<std::pair<int, int>>> &g, std::vector<std::pair<int, int>> &match)
-{
-    if (used[v])
-        return false;
-    used[v] = true;
 
-    for (auto [to, id] : g[v])
+
+
+
+// ============================================================
+// Вспомогательные структуры и функции
+// ============================================================
+
+struct LessonInfo
+{
+    Lesson *lesson = nullptr;
+    int teacherId = -1;
+    QVector<int> classIds;
+};
+
+bool isEmptyCell(const LessonAssignment &cell)
+{
+    return cell.lessonId.isEmpty() && cell.lessonName.isEmpty();
+}
+
+QVector<int> extractClassIds(Lesson *lesson)
+{
+    QVector<int> result;
+    if (!lesson)
+        return result;
+
+    for (int classId : lesson->classes())
+        result.push_back(classId);
+
+    return result;
+}
+
+LessonInfo makeLessonInfo(Lesson *lesson)
+{
+    LessonInfo info;
+    info.lesson = lesson;
+
+    if (!lesson)
+        return info;
+
+    info.teacherId = lesson->teacherId();
+    info.classIds = extractClassIds(lesson);
+    return info;
+}
+bool conflictsWithUsed(const LessonInfo &info, const std::set<int> &usedTeachers, const std::set<int> &usedClasses)
+{
+    if (usedTeachers.count(info.teacherId) != 0)
+        return true;
+
+    for (int classId : info.classIds)
     {
-        if (match[to].first == -1 || augment(match[to].first, used, g, match))
-        {
-            match[to] = {v, id};
+        if (usedClasses.count(classId) != 0)
             return true;
-        }
     }
+
     return false;
 }
 
-std::vector<std::pair<int, int>> kuhn(QList<Lesson*> &lessons)
+void addResources(const LessonInfo &info, std::set<int> &usedTeachers, std::set<int> &usedClasses)
 {
+    usedTeachers.insert(info.teacherId);
+    for (int classId : info.classIds)
+        usedClasses.insert(classId);
+}
+
+void removeResources(const LessonInfo &info, std::set<int> &usedTeachers, std::set<int> &usedClasses)
+{
+    usedTeachers.erase(info.teacherId);
+    for (int classId : info.classIds)
+        usedClasses.erase(classId);
+}
+
+LessonBuckets splitLessons(const QList<Lesson*> &allLessons, const std::function<bool(Lesson*)> &isUsed)
+{
+    LessonBuckets buckets;
+
+    for (Lesson *lesson : allLessons)
+    {
+        if (!lesson)
+            continue;
+
+        if (isUsed(lesson))
+            continue;
+
+        if (lesson->classes().isEmpty())
+            continue;
+
+        const bool isDouble = lesson->isDouble(); // если метод называется иначе — подправь тут
+        const bool twoClasses = lesson->classes().size() >= 2;
+
+        if (isDouble)
+        {
+            if (twoClasses)
+                buckets.doubleTwoClass.push_back(lesson);
+            else
+                buckets.doubleOneClass.push_back(lesson);
+        }
+        else
+        {
+            if (twoClasses)
+                buckets.singleTwoClass.push_back(lesson);
+            else
+                buckets.singleOneClass.push_back(lesson);
+        }
+    }
+
+    return buckets;
+}
+
+// ------------------------------------------------------------
+// Кун для уроков с одним классом:
+// teacher -> class
+// ------------------------------------------------------------
+bool augment(int v, std::map<int, bool> &used, const std::map<int, std::vector<std::pair<int, int>>> &g,
+                    std::map<int, std::pair<int, int>> &match)
+{
+    if (used[v])
+        return false;
+
+    used[v] = true;
+
+    auto it = g.find(v);
+    if (it == g.end())
+        return false;
+
+    for (const auto &[to, lessonIndex] : it->second)
+    {
+        auto mt = match.find(to);
+
+        if (mt == match.end() || mt->second.first == -1 ||
+            augment(mt->second.first, used, g, match))
+        {
+            match[to] = {v, lessonIndex};
+            return true;
+        }
+    }
+
+    return false;
+}
+
+QList<Lesson*> selectOneClassLessons(const QList<Lesson*> &candidates, int limit)
+{
+    if (limit <= 0 || candidates.isEmpty())
+        return {};
+
     std::map<int, std::vector<std::pair<int, int>>> g;
     std::map<int, bool> used;
-    for (Lesson *pl : lessons)
+
+    for (int i = 0; i < candidates.size(); ++i)
     {
-        used[pl->teacherId()] = false;
-        g[pl->teacherId()].push_back({pl->classes()[0], pl->id()});
+        Lesson *lesson = candidates[i];
+        if (!lesson)
+            continue;
+
+        const auto classes = lesson->classes();
+        if (classes.size() != 1)
+            continue;
+
+        const int teacherId = lesson->teacherId();
+        const int classId = classes[0];
+
+        used[teacherId] = false;
+        g[teacherId].push_back({classId, i});
     }
 
-    std::vector<std::pair<int, int>> match(500, {-1, -1});
+    std::map<int, std::pair<int, int>> match;
 
-    for (auto [v, classes] : g)
+    for (const auto &[teacherId, edges] : g)
     {
-        if (augment(v, used, g, match))
-            for (auto & [tmp, b] : used)
-                b = false;
+        Q_UNUSED(edges);
+
+        if (augment(teacherId, used, g, match))
+        {
+            for (auto &[k, v] : used)
+                v = false;
+        }
     }
 
-    return match;
+    QList<Lesson*> result;
+    for (const auto &[classId, pair] : match)
+    {
+        Q_UNUSED(classId);
+
+        if (pair.first == -1)
+            continue;
+
+        const int lessonIndex = pair.second;
+        if (lessonIndex >= 0 && lessonIndex < candidates.size() && candidates[lessonIndex])
+            result.push_back(candidates[lessonIndex]);
+
+        if (result.size() >= limit)
+            break;
+    }
+
+    return result;
+}
+
+// ------------------------------------------------------------
+// Перебор с отсечениями для уроков с двумя классами
+// ------------------------------------------------------------
+
+void searchBestTwoClassSubset(const QVector<LessonInfo> &items, int idx, int limit, std::set<int> &usedTeachers, std::set<int> &usedClasses,
+                              QVector<int> &current, QVector<int> &best)
+{
+    if (current.size() > best.size())
+        best = current;
+
+    if (current.size() == limit || idx >= items.size())
+        return;
+
+    // Отсечение: даже если взять все оставшиеся элементы,
+    // текущий ответ уже нельзя улучшить.
+    if (current.size() + (items.size() - idx) <= best.size())
+        return;
+
+    // Ветка 1: пропустить текущий элемент
+    searchBestTwoClassSubset(items, idx + 1, limit, usedTeachers, usedClasses, current, best);
+
+    // Ветка 2: взять текущий элемент, если нет конфликтов
+    const LessonInfo &info = items[idx];
+    if (conflictsWithUsed(info, usedTeachers, usedClasses))
+        return;
+
+    addResources(info, usedTeachers, usedClasses);
+    current.push_back(idx);
+
+    searchBestTwoClassSubset(items, idx + 1, limit, usedTeachers, usedClasses, current, best);
+
+    current.pop_back();
+    removeResources(info, usedTeachers, usedClasses);
+}
+
+QList<Lesson*> selectTwoClassLessons(const QList<Lesson*> &candidates, int limit)
+{
+    if (limit <= 0 || candidates.isEmpty())
+        return {};
+
+    QVector<LessonInfo> items;
+    items.reserve(candidates.size());
+
+    for (Lesson *lesson : candidates)
+    {
+        if (!lesson)
+            continue;
+
+        const auto classes = lesson->classes();
+        if (classes.size() < 2)
+            continue;
+
+        items.push_back(makeLessonInfo(lesson));
+    }
+
+    // Небольшая эвристика: сначала более "тяжёлые" элементы.
+    // Это не меняет точность, но обычно помогает отсечениям.
+    std::sort(items.begin(), items.end(), [](const LessonInfo &a, const LessonInfo &b) {
+        if (a.classIds.size() != b.classIds.size())
+            return a.classIds.size() > b.classIds.size();
+        return a.teacherId < b.teacherId;
+    });
+
+    std::set<int> usedTeachers;
+    std::set<int> usedClasses;
+    QVector<int> current;
+    QVector<int> best;
+
+    searchBestTwoClassSubset(items, 0, limit, usedTeachers, usedClasses, current, best);
+
+    QList<Lesson*> result;
+    for (int idx : best)
+    {
+        if (idx >= 0 && idx < items.size() && items[idx].lesson)
+            result.push_back(items[idx].lesson);
+    }
+
+    return result;
+}
+
+std::set<int> occupiedTeachersInRows(const std::map<int, Lesson*> &lessonById, const QVector<LessonAssignment> &cells,
+                                            int roomCount, int row1, int row2)
+{
+    std::set<int> usedTeachers;
+
+    for (int row : {row1, row2})
+    {
+        for (int column = 0; column < roomCount; ++column)
+        {
+            const LessonAssignment &cell = cells[row * roomCount + column];
+            if (isEmptyCell(cell))
+                continue;
+
+            bool ok = false;
+            const int lessonId = cell.lessonId.toInt(&ok);
+            if (!ok)
+                continue;
+
+            auto it = lessonById.find(lessonId);
+            if (it == lessonById.end() || !it->second)
+                continue;
+
+            usedTeachers.insert(it->second->teacherId());
+        }
+    }
+
+    return usedTeachers;
+}
+
+std::set<int> occupiedClassesInRows(const std::map<int, Lesson*> &lessonById, const QVector<LessonAssignment> &cells,
+                                           int roomCount, int row1, int row2)
+{
+    std::set<int> usedClasses;
+
+    for (int row : {row1, row2})
+    {
+        for (int column = 0; column < roomCount; ++column)
+        {
+            const LessonAssignment &cell = cells[row * roomCount + column];
+            if (isEmptyCell(cell))
+                continue;
+
+            bool ok = false;
+            const int lessonId = cell.lessonId.toInt(&ok);
+            if (!ok)
+                continue;
+
+            auto it = lessonById.find(lessonId);
+            if (it == lessonById.end() || !it->second)
+                continue;
+
+            const auto classes = it->second->classes();
+            for (int classId : classes)
+                usedClasses.insert(classId);
+        }
+    }
+
+    return usedClasses;
+}
+
+std::set<int> occupiedTeachersInRow(const std::map<int, Lesson*> &lessonById, const QVector<LessonAssignment> &cells,
+                                           int roomCount, int row)
+{
+    return occupiedTeachersInRows(lessonById, cells, roomCount, row, row);
+}
+
+std::set<int> occupiedClassesInRow(const std::map<int, Lesson*> &lessonById,
+                                          const QVector<LessonAssignment> &cells,
+                                          int roomCount,
+                                          int row)
+{
+    return occupiedClassesInRows(lessonById, cells, roomCount, row, row);
+}
+
+// ============================================================
+// Методы TimetableModel
+// ============================================================
+
+void TimetableModel::collectOccupiedResourcesForRow(int row,
+                                                    const std::map<int, Lesson*> &lessonById,
+                                                    std::set<int> &usedTeachers,
+                                                    std::set<int> &usedClasses) const
+{
+    for (int column = 0; column < m_roomCount; ++column)
+    {
+        const LessonAssignment &cell = m_cells[cellIndex(row, column)];
+        if (isEmptyCell(cell))
+            continue;
+
+        bool ok = false;
+        const int lessonId = cell.lessonId.toInt(&ok);
+        if (!ok)
+            continue;
+
+        auto it = lessonById.find(lessonId);
+        if (it == lessonById.end() || !it->second)
+            continue;
+
+        Lesson *lesson = it->second;
+        usedTeachers.insert(lesson->teacherId());
+
+        for (int classId : lesson->classes())
+            usedClasses.insert(classId);
+    }
+}
+
+void TimetableModel::collectOccupiedResourcesForRows(int row1,
+                                                     int row2,
+                                                     const std::map<int, Lesson*> &lessonById,
+                                                     std::set<int> &usedTeachers,
+                                                     std::set<int> &usedClasses) const
+{
+    collectOccupiedResourcesForRow(row1, lessonById, usedTeachers, usedClasses);
+    collectOccupiedResourcesForRow(row2, lessonById, usedTeachers, usedClasses);
+}
+
+std::vector<int> TimetableModel::freeColumnsForRow(int row) const
+{
+    std::vector<int> result;
+    for (int column = 0; column < m_roomCount; ++column)
+    {
+        const LessonAssignment &cell = m_cells[cellIndex(row, column)];
+        if (isEmptyCell(cell))
+            result.push_back(column);
+    }
+    return result;
+}
+
+std::vector<int> TimetableModel::freeColumnsForRows(int row1, int row2) const
+{
+    std::vector<int> result;
+    for (int column = 0; column < m_roomCount; ++column)
+    {
+        const LessonAssignment &cell1 = m_cells[cellIndex(row1, column)];
+        const LessonAssignment &cell2 = m_cells[cellIndex(row2, column)];
+
+        if (isEmptyCell(cell1) && isEmptyCell(cell2))
+            result.push_back(column);
+    }
+    return result;
+}
+
+void TimetableModel::placeLessonInTwoRows(int row1, int row2, int column, Lesson *lesson)
+{
+    if (!lesson)
+        return;
+
+    const QString lessonId = QString::number(lesson->id());
+    const QString lessonName = lesson->name();
+
+    setLessonAtCell(row1, column, lessonId, lessonName);
+    setLessonAtCell(row2, column, lessonId, lessonName);
+}
+
+void TimetableModel::placeLessonInRow(int row, int column, Lesson *lesson)
+{
+    if (!lesson)
+        return;
+
+    placeLesson(row, column, QString::number(lesson->id()), lesson->name());
+}
+
+void TimetableModel::generateDoubleLessons(LessonBuckets &buckets,
+                                           const std::map<int, Lesson*> &lessonById)
+{
+    for (int row = 0; row + 1 < m_slotCount && (!buckets.doubleOneClass.isEmpty() || !buckets.doubleTwoClass.isEmpty()); row += 2)
+    {
+        const int nextRow = row + 1;
+
+        std::set<int> usedTeachers;
+        std::set<int> usedClasses;
+        collectOccupiedResourcesForRows(row, nextRow, lessonById, usedTeachers, usedClasses);
+
+        // Сначала двойные уроки с двумя классами
+        {
+            const auto freeColumns = freeColumnsForRows(row, nextRow);
+            if (!freeColumns.empty())
+            {
+                QList<Lesson*> available;
+                for (Lesson *lesson : buckets.doubleTwoClass)
+                {
+                    if (!lesson)
+                        continue;
+
+                    LessonInfo info = makeLessonInfo(lesson);
+                    if (!conflictsWithUsed(info, usedTeachers, usedClasses))
+                        available.push_back(lesson);
+                }
+
+                QList<Lesson*> selected = selectTwoClassLessons(available, (int)freeColumns.size());
+
+                std::set<int> placedIds;
+                int columnIndex = 0;
+
+                for (Lesson *lesson : selected)
+                {
+                    if (!lesson)
+                        continue;
+
+                    while (columnIndex < (int)freeColumns.size())
+                    {
+                        const int column = freeColumns[columnIndex];
+                        const LessonAssignment &cell1 = m_cells[cellIndex(row, column)];
+                        const LessonAssignment &cell2 = m_cells[cellIndex(nextRow, column)];
+
+                        if (isEmptyCell(cell1) && isEmptyCell(cell2))
+                        {
+                            placeLessonInTwoRows(row, nextRow, column, lesson);
+                            placedIds.insert(lesson->id());
+
+                            LessonInfo info = makeLessonInfo(lesson);
+                            addResources(info, usedTeachers, usedClasses);
+
+                            ++columnIndex;
+                            break;
+                        }
+
+                        ++columnIndex;
+                    }
+                }
+
+                QList<Lesson*> next;
+                for (Lesson *lesson : buckets.doubleTwoClass)
+                {
+                    if (!lesson || placedIds.count(lesson->id()) != 0)
+                        continue;
+                    next.push_back(lesson);
+                }
+                buckets.doubleTwoClass = next;
+            }
+        }
+
+        // Затем двойные уроки с одним классом
+        {
+            const auto freeColumns = freeColumnsForRows(row, nextRow);
+            if (!freeColumns.empty())
+            {
+                QList<Lesson*> available;
+                for (Lesson *lesson : buckets.doubleOneClass)
+                {
+                    if (!lesson)
+                        continue;
+
+                    LessonInfo info = makeLessonInfo(lesson);
+                    if (!conflictsWithUsed(info, usedTeachers, usedClasses))
+                        available.push_back(lesson);
+                }
+
+                QList<Lesson*> selected = selectOneClassLessons(available, (int)freeColumns.size());
+
+                std::set<int> placedIds;
+                int columnIndex = 0;
+
+                for (Lesson *lesson : selected)
+                {
+                    if (!lesson)
+                        continue;
+
+                    while (columnIndex < (int)freeColumns.size())
+                    {
+                        const int column = freeColumns[columnIndex];
+                        const LessonAssignment &cell1 = m_cells[cellIndex(row, column)];
+                        const LessonAssignment &cell2 = m_cells[cellIndex(nextRow, column)];
+
+                        if (isEmptyCell(cell1) && isEmptyCell(cell2))
+                        {
+                            placeLessonInTwoRows(row, nextRow, column, lesson);
+                            placedIds.insert(lesson->id());
+
+                            LessonInfo info = makeLessonInfo(lesson);
+                            addResources(info, usedTeachers, usedClasses);
+
+                            ++columnIndex;
+                            break;
+                        }
+
+                        ++columnIndex;
+                    }
+                }
+
+                QList<Lesson*> next;
+                for (Lesson *lesson : buckets.doubleOneClass)
+                {
+                    if (!lesson || placedIds.count(lesson->id()) != 0)
+                        continue;
+                    next.push_back(lesson);
+                }
+                buckets.doubleOneClass = next;
+            }
+        }
+    }
+}
+
+void TimetableModel::generateSingleLessons(LessonBuckets &buckets,
+                                           const std::map<int, Lesson*> &lessonById)
+{
+    for (int row = 0; row < m_slotCount && (!buckets.singleOneClass.isEmpty() || !buckets.singleTwoClass.isEmpty()); ++row)
+    {
+        std::set<int> usedTeachers;
+        std::set<int> usedClasses;
+        collectOccupiedResourcesForRow(row, lessonById, usedTeachers, usedClasses);
+
+        // Сначала одинарные уроки с двумя классами
+        {
+            const auto freeColumns = freeColumnsForRow(row);
+            if (!freeColumns.empty())
+            {
+                QList<Lesson*> available;
+                for (Lesson *lesson : buckets.singleTwoClass)
+                {
+                    if (!lesson)
+                        continue;
+
+                    LessonInfo info = makeLessonInfo(lesson);
+                    if (!conflictsWithUsed(info, usedTeachers, usedClasses))
+                        available.push_back(lesson);
+                }
+
+                QList<Lesson*> selected = selectTwoClassLessons(available, (int)freeColumns.size());
+
+                std::set<int> placedIds;
+                int columnIndex = 0;
+
+                for (Lesson *lesson : selected)
+                {
+                    if (!lesson)
+                        continue;
+
+                    while (columnIndex < (int)freeColumns.size())
+                    {
+                        const int column = freeColumns[columnIndex];
+                        const LessonAssignment &cell = m_cells[cellIndex(row, column)];
+
+                        if (isEmptyCell(cell))
+                        {
+                            placeLessonInRow(row, column, lesson);
+                            placedIds.insert(lesson->id());
+
+                            LessonInfo info = makeLessonInfo(lesson);
+                            addResources(info, usedTeachers, usedClasses);
+
+                            ++columnIndex;
+                            break;
+                        }
+
+                        ++columnIndex;
+                    }
+                }
+
+                QList<Lesson*> next;
+                for (Lesson *lesson : buckets.singleTwoClass)
+                {
+                    if (!lesson || placedIds.count(lesson->id()) != 0)
+                        continue;
+                    next.push_back(lesson);
+                }
+                buckets.singleTwoClass = next;
+            }
+        }
+
+        // Затем одинарные уроки с одним классом
+        {
+            const auto freeColumns = freeColumnsForRow(row);
+            if (!freeColumns.empty())
+            {
+                QList<Lesson*> available;
+                for (Lesson *lesson : buckets.singleOneClass)
+                {
+                    if (!lesson)
+                        continue;
+
+                    LessonInfo info = makeLessonInfo(lesson);
+                    if (!conflictsWithUsed(info, usedTeachers, usedClasses))
+                        available.push_back(lesson);
+                }
+
+                QList<Lesson*> selected = selectOneClassLessons(available, (int)freeColumns.size());
+
+                std::set<int> placedIds;
+                int columnIndex = 0;
+
+                for (Lesson *lesson : selected)
+                {
+                    if (!lesson)
+                        continue;
+
+                    while (columnIndex < (int)freeColumns.size())
+                    {
+                        const int column = freeColumns[columnIndex];
+                        const LessonAssignment &cell = m_cells[cellIndex(row, column)];
+
+                        if (isEmptyCell(cell))
+                        {
+                            placeLessonInRow(row, column, lesson);
+                            placedIds.insert(lesson->id());
+
+                            LessonInfo info = makeLessonInfo(lesson);
+                            addResources(info, usedTeachers, usedClasses);
+
+                            ++columnIndex;
+                            break;
+                        }
+
+                        ++columnIndex;
+                    }
+                }
+
+                QList<Lesson*> next;
+                for (Lesson *lesson : buckets.singleOneClass)
+                {
+                    if (!lesson || placedIds.count(lesson->id()) != 0)
+                        continue;
+                    next.push_back(lesson);
+                }
+                buckets.singleOneClass = next;
+            }
+        }
+    }
 }
 
 void TimetableModel::generate()
@@ -565,153 +1265,25 @@ void TimetableModel::generate()
         return;
     }
 
-    QList<Lesson*> lessons = lessonModel->lessons();
+    const QList<Lesson*> allLessons = lessonModel->lessons();
 
     std::map<int, Lesson*> lessonById;
-    for (Lesson *lesson : lessons)
+    for (Lesson *lesson : allLessons)
     {
         if (!lesson)
             continue;
-
         lessonById[lesson->id()] = lesson;
     }
 
-    QList<Lesson*> remainingLessons;
-    for (Lesson *lesson : lessons)
-    {
-        if (!lesson)
-            continue;
+    auto isUsed = [this](Lesson *lesson) -> bool {
+        return lesson && isLessonUsed(QString::number(lesson->id()));
+    };
 
-        if (isLessonUsed(QString::number(lesson->id())))
-            continue;
+    LessonBuckets buckets = splitLessons(allLessons, isUsed);
 
-        if (lesson->classes().isEmpty())
-            continue;
-
-        remainingLessons.push_back(lesson);
-    }
-
-    lessons = remainingLessons;
-
-    int row = 0;
-    while (row < m_slotCount && lessons.size() > 0)
-    {
-        std::set<int> usedTeachers;
-        std::set<int> usedClasses;
-
-        for (int column = 0; column < m_roomCount; ++column)
-        {
-            const LessonAssignment &cell = m_cells[cellIndex(row, column)];
-            if (cell.lessonId.isEmpty() && cell.lessonName.isEmpty())
-                continue;
-
-            bool ok = false;
-            const int lessonId = cell.lessonId.toInt(&ok);
-            if (!ok)
-                continue;
-
-            auto it = lessonById.find(lessonId);
-            if (it == lessonById.end() || !it->second)
-                continue;
-
-            Lesson *lesson = it->second;
-
-            usedTeachers.insert(lesson->teacherId());
-
-            if (!lesson->classes().isEmpty())
-                usedClasses.insert(lesson->classes()[0]);
-        }
-
-        QList<Lesson*> availableLessons;
-        for (Lesson *lesson : lessons)
-        {
-            if (!lesson)
-                continue;
-
-            if (usedTeachers.count(lesson->teacherId()) != 0)
-                continue;
-
-            if (lesson->classes().isEmpty())
-                continue;
-
-            if (usedClasses.count(lesson->classes()[0]) != 0)
-                continue;
-
-            availableLessons.push_back(lesson);
-        }
-
-        int freeCells = 0;
-        for (int column = 0; column < m_roomCount; ++column)
-        {
-            const LessonAssignment &cell = m_cells[cellIndex(row, column)];
-            if (cell.lessonId.isEmpty() && cell.lessonName.isEmpty())
-                ++freeCells;
-        }
-
-        if (freeCells <= 0 || availableLessons.isEmpty())
-        {
-            ++row;
-            continue;
-        }
-
-        std::vector<std::pair<int, int>> match = kuhn(availableLessons);
-
-        std::set<int> deleted;
-        int placed = 0;
-        int column = 0;
-
-        for (int i = 0; placed < freeCells && i < (int)match.size(); ++i)
-        {
-            if (match[i].first == -1)
-                continue;
-
-            int lessonId = match[i].second;
-            Lesson *lesson = nullptr;
-
-            for (Lesson *les : availableLessons)
-            {
-                if (les && les->id() == lessonId)
-                {
-                    lesson = les;
-                    break;
-                }
-            }
-
-            if (!lesson)
-                continue;
-
-            while (column < m_roomCount)
-            {
-                const LessonAssignment &cell = m_cells[cellIndex(row, column)];
-                if (cell.lessonId.isEmpty() && cell.lessonName.isEmpty())
-                    break;
-
-                ++column;
-            }
-
-            if (column >= m_roomCount)
-                break;
-
-            placeLesson(row, column, QString::number(lesson->id()), lesson->name());
-            deleted.insert(lesson->id());
-
-            ++placed;
-            ++column;
-        }
-
-        QList<Lesson*> newLessons;
-        for (Lesson *lesson : lessons)
-        {
-            if (!lesson)
-                continue;
-
-            if (!deleted.count(lesson->id()))
-                newLessons.push_back(lesson);
-        }
-
-        lessons = newLessons;
-        ++row;
-    }
+    // Сначала двойные уроки, потом одинарные
+    generateDoubleLessons(buckets, lessonById);
+    generateSingleLessons(buckets, lessonById);
 
     m_suspendAutosave = false;
     saveToStorage();

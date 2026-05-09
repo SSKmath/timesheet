@@ -41,7 +41,9 @@ public:
     Q_INVOKABLE int count() const;
     Q_INVOKABLE QObject *lessonAt(int index) const;
     Q_INVOKABLE int idTeacher(QString id) const;
-    Q_INVOKABLE int idClass(QString id) const;
+    Q_INVOKABLE int idClassFirst(QString id) const;
+    Q_INVOKABLE int idClassSecond(QString id) const;
+    Q_INVOKABLE bool isDoubleById(QString id) const;
 
     QList<Lesson*> lessons() const;
 

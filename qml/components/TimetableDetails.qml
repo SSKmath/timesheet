@@ -103,13 +103,23 @@ Page {
                     }
 
                     Text {
-                        text: lessonId ? teacherModel.teacherById(lessonModel.idTeacher(lessonId)).surname : ""
+                        text: lessonId ? lessonModel.isDoubleById(lessonId) ? "парный" : "" : ""
+                        anchors.bottom: parent.bottom
                     }
 
                     Text {
-                        text: lessonId ? classModel.classById(lessonModel.idClass(lessonId)).name : ""
+                        text: lessonId ? teacherModel.teacherById(lessonModel.idTeacher(lessonId)).surname : ""
+                    }
+
+                    Column {
                         anchors.top: parent.top
                         anchors.right: parent.right
+                        Text {
+                            text: lessonId ? classModel.classById(lessonModel.idClassFirst(lessonId)).name : ""
+                        }
+                        Text {
+                            text: lessonId ? classModel.classById(lessonModel.idClassSecond(lessonId)).name : ""
+                        }
                     }
 
                     MouseArea {
@@ -185,13 +195,14 @@ Page {
                         required property string id
                         required property string name
                         required property int teacherId
+                        required property bool isDouble
 
                         property bool used: timetableModel.lessonUsageRevision >= 0
                                             && timetableModel.isLessonUsed(id)
 
                         required property var classes
 
-                        height: used ? 0 : 60
+                        height: used ? 0 : 80
                         visible: !used
                         opacity: selectedLessonId === id ? 0.75 : 1.0
                         color: selectedLessonId === id ? "#ffcccc" : "#ffffff"
@@ -213,8 +224,19 @@ Page {
                                 color: "gray"
                             }
 
+                            Row {
+                                Text {
+                                    text: classes.length > 0 ? classModel.classAt(classes[0] - 1).name : ""
+                                    font.pixelSize: 12
+                                }
+                                Text {
+                                    text: classes.length > 1 ? classModel.classAt(classes[1] - 1).name : ""
+                                    font.pixelSize: 12
+                                }
+                            }
+
                             Text {
-                                text: classes.length > 0 ? classModel.classAt(classes[0] - 1).name : ""
+                                text: isDouble ? "парный" : ""
                                 font.pixelSize: 12
                             }
                         }

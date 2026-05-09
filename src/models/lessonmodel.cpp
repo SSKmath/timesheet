@@ -169,12 +169,35 @@ int LessonModel::idTeacher(QString id) const
     }
 }
 
-int LessonModel::idClass(QString id) const
+int LessonModel::idClassFirst(QString id) const
 {
     for (Lesson *les : m_lessons)
     {
         if (les->id() == id.toInt())
             return les->classes()[0];
+    }
+}
+
+
+int LessonModel::idClassSecond(QString id) const
+{
+    for (Lesson *les : m_lessons)
+    {
+        if (les->id() == id.toInt())
+        {
+            if (les->classes().size() == 1)
+                return les->classes()[0];
+            return les->classes()[1];
+        }
+    }
+}
+
+bool LessonModel::isDoubleById(QString id) const
+{
+    for (Lesson *les : m_lessons)
+    {
+        if (les->id() == id.toInt())
+            return les->isDouble();
     }
 }
 
