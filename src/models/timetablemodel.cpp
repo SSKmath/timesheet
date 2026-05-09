@@ -980,9 +980,10 @@ void TimetableModel::placeLessonInRow(int row, int column, Lesson *lesson)
     placeLesson(row, column, QString::number(lesson->id()), lesson->name());
 }
 
-void TimetableModel::generateDoubleLessons(LessonBuckets &buckets,
-                                           const std::map<int, Lesson*> &lessonById)
+void TimetableModel::generateDoubleLessons(LessonBuckets &buckets, const std::map<int, Lesson*> &lessonById)
 {
+    const int maxDoublePerPair = qMax(1, int(std::floor(m_roomCount * kMaxDoubleSharePerPair)));
+
     for (int row = 0; row + 1 < m_slotCount && (!buckets.doubleOneClass.isEmpty() || !buckets.doubleTwoClass.isEmpty()); row += 2)
     {
         const int nextRow = row + 1;
@@ -991,10 +992,17 @@ void TimetableModel::generateDoubleLessons(LessonBuckets &buckets,
         std::set<int> usedClasses;
         collectOccupiedResourcesForRows(row, nextRow, lessonById, usedTeachers, usedClasses);
 
-        // Сначала двойные уроки с двумя классами
+        const auto freeColumns = freeColumnsForRows(row, nextRow);
+        if (freeColumns.empty())
+            continue;
+
+        const int pairQuota = qMin(maxDoublePerPair, (int)freeColumns.size());
+        int placedInPair = 0;
+
+        // ---- Сначала двойные уроки с двумя классами
         {
-            const auto freeColumns = freeColumnsForRows(row, nextRow);
-            if (!freeColumns.empty())
+            const int canPlace = pairQuota - placedInPair;
+            if (canPlace > 0)
             {
                 QList<Lesson*> available;
                 for (Lesson *lesson : buckets.doubleTwoClass)
@@ -1007,7 +1015,7 @@ void TimetableModel::generateDoubleLessons(LessonBuckets &buckets,
                         available.push_back(lesson);
                 }
 
-                QList<Lesson*> selected = selectTwoClassLessons(available, (int)freeColumns.size());
+                QList<Lesson*> selected = selectTwoClassLessons(available, canPlace);
 
                 std::set<int> placedIds;
                 int columnIndex = 0;
@@ -1031,12 +1039,16 @@ void TimetableModel::generateDoubleLessons(LessonBuckets &buckets,
                             LessonInfo info = makeLessonInfo(lesson);
                             addResources(info, usedTeachers, usedClasses);
 
+                            ++placedInPair;
                             ++columnIndex;
                             break;
                         }
 
                         ++columnIndex;
                     }
+
+                    if (placedInPair >= pairQuota)
+                        break;
                 }
 
                 QList<Lesson*> next;
@@ -1050,10 +1062,10 @@ void TimetableModel::generateDoubleLessons(LessonBuckets &buckets,
             }
         }
 
-        // Затем двойные уроки с одним классом
+        // ---- Потом двойные уроки с одним классом
         {
-            const auto freeColumns = freeColumnsForRows(row, nextRow);
-            if (!freeColumns.empty())
+            const int canPlace = pairQuota - placedInPair;
+            if (canPlace > 0)
             {
                 QList<Lesson*> available;
                 for (Lesson *lesson : buckets.doubleOneClass)
@@ -1066,7 +1078,7 @@ void TimetableModel::generateDoubleLessons(LessonBuckets &buckets,
                         available.push_back(lesson);
                 }
 
-                QList<Lesson*> selected = selectOneClassLessons(available, (int)freeColumns.size());
+                QList<Lesson*> selected = selectOneClassLessons(available, canPlace);
 
                 std::set<int> placedIds;
                 int columnIndex = 0;
@@ -1090,12 +1102,16 @@ void TimetableModel::generateDoubleLessons(LessonBuckets &buckets,
                             LessonInfo info = makeLessonInfo(lesson);
                             addResources(info, usedTeachers, usedClasses);
 
+                            ++placedInPair;
                             ++columnIndex;
                             break;
                         }
 
                         ++columnIndex;
                     }
+
+                    if (placedInPair >= pairQuota)
+                        break;
                 }
 
                 QList<Lesson*> next;
