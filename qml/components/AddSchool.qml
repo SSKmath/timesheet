@@ -31,10 +31,17 @@ Page {
         anchors.margins: 16
         spacing: 12
 
+        // Поле названия школы (овальное, голубая рамка)
         TextField {
             id: schoolNameField
             placeholderText: "Название школы"
             Layout.fillWidth: true
+            background: Rectangle {
+                radius: height / 2
+                color: parent.focus ? "#e8f0fe" : "#f5f5f5"
+                border.color: "#1976D2"
+                border.width: 1.5
+            }
         }
 
         Label {
@@ -42,23 +49,36 @@ Page {
             font.bold: true
         }
 
+        // Область списка кабинетов (серый фон, скругление)
         ScrollView {
             Layout.fillWidth: true
-            Layout.preferredHeight: 240
+            Layout.fillHeight: true   // чтобы занимал всё доступное место
+            padding: 8
+            background: Rectangle {
+                color: "#f5f5f5"
+                radius: 8
+            }
 
             ListView {
                 id: roomsListView
                 width: parent.width
                 model: roomsModel
+                spacing: 8
+                clip: true
                 delegate: Rectangle {
                     width: roomsListView.width
                     height: 48
-                    color: "transparent"
+                    radius: 12
+                    border.color: "#1976D2"
+                    border.width: 1.5
+                    color: "#fafafa"
+
                     RowLayout {
                         anchors.fill: parent
-                        anchors.margins: 4
+                        anchors.margins: 8
                         spacing: 8
 
+                        // Поле названия кабинета (овальное)
                         TextField {
                             id: nameEditor
                             text: name
@@ -68,8 +88,15 @@ Page {
                                 roomsModel.set(index, {"name": text, "size": roomsModel.get(index).size})
                                 console.log("Изменено имя:", text)
                             }
+                            background: Rectangle {
+                                radius: height / 2
+                                color: parent.focus ? "#e8f0fe" : "#f5f5f5"
+                                border.color: "#1976D2"
+                                border.width: 1
+                            }
                         }
 
+                        // ComboBox с овальным фоном
                         ComboBox {
                             id: sizeCombo
                             model: ["Маленький", "Большой"]
@@ -78,13 +105,36 @@ Page {
                                 roomsModel.set(index, {"name": roomsModel.get(index).name, "size": currentText})
                                 console.log("Изменён размер для", roomsModel.get(index).name, "->", currentText)
                             }
+                            background: Rectangle {
+                                radius: height / 2
+                                color: parent.focus ? "#e8f0fe" : "#f5f5f5"
+                                border.color: "#1976D2"
+                                border.width: 1
+                                implicitHeight: 25
+                            }
                         }
 
+                        // Кнопка "Удалить" (овальная, серая с красноватой обводкой)
                         Button {
                             text: "Удалить"
+                            focusPolicy: Qt.NoFocus
+                            flat: true
                             onClicked: {
                                 console.log("Удаляем кабинет:", roomsModel.get(index).name)
                                 roomsModel.remove(index)
+                            }
+                            background: Rectangle {
+                                radius: height / 2
+                                color: parent.hovered ? "#ffcdd2" : "#f5f5f5"
+                                border.color: "#d32f2f"
+                                border.width: 1
+                            }
+                            contentItem: Text {
+                                text: parent.text
+                                color: "#d32f2f"
+                                font.bold: true
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
                             }
                         }
                     }
@@ -92,6 +142,7 @@ Page {
             }
         }
 
+        // Строка добавления нового кабинета
         RowLayout {
             Layout.fillWidth: true
             spacing: 8
@@ -101,6 +152,12 @@ Page {
                 placeholderText: "Новое название кабинета"
                 Layout.fillWidth: true
                 onAccepted: addRoom()
+                background: Rectangle {
+                    radius: height / 2
+                    color: parent.focus ? "#e8f0fe" : "#f5f5f5"
+                    border.color: "#1976D2"
+                    border.width: 1.5
+                }
             }
 
             ComboBox {
@@ -108,20 +165,61 @@ Page {
                 model: ["Маленький", "Большой"]
                 currentIndex: 0
                 Layout.preferredWidth: 120
+                background: Rectangle {
+                    radius: height / 2
+                    color: parent.focus ? "#e8f0fe" : "#f5f5f5"
+                    border.color: "#1976D2"
+                    border.width: 1
+                    implicitHeight: 25
+                }
             }
 
             Button {
                 text: "Добавить"
+                focusPolicy: Qt.NoFocus
+                flat: true
                 onClicked: addRoom()
+                background: Rectangle {
+                    radius: height / 2
+                    color: parent.hovered ? "#e3f2fd" : "#f5f5f5"
+                    border.color: "#1976D2"
+                    border.width: 1.5
+                }
+                contentItem: Text {
+                    text: parent.text
+                    color: "#1976D2"
+                    font.bold: true
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
             }
         }
 
+        // Нижние кнопки (Сохранить и Отмена) – стилизованы как на странице учителей
         RowLayout {
             Layout.fillWidth: true
-            spacing: 8
+            spacing: 16
+
             Button {
                 text: "Сохранить"
                 Layout.fillWidth: true
+                Layout.preferredWidth: 1
+                focusPolicy: Qt.NoFocus
+                flat: true
+                background: Rectangle {
+                    radius: height / 2
+                    color: "#1976D2"
+                    border.color: "#1976D2"
+                    border.width: 1
+                }
+                contentItem: Text {
+                    text: parent.text
+                    color: "white"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    font.pixelSize: 16
+                    font.bold: true
+                }
                 onClicked: {
                     var name = schoolNameField.text.trim()
                     if (name.length === 0) {
@@ -150,6 +248,23 @@ Page {
             Button {
                 text: "Отмена"
                 Layout.fillWidth: true
+                Layout.preferredWidth: 1
+                focusPolicy: Qt.NoFocus
+                flat: true
+                background: Rectangle {
+                    radius: height / 2
+                    color: "#f0f0f0"
+                    border.color: "#1976D2"
+                    border.width: 2
+                }
+                contentItem: Text {
+                    text: parent.text
+                    color: "#1976D2"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    font.pixelSize: 16
+                    font.bold: true
+                }
                 onClicked: {
                     schoolNameField.text = ""
                     roomsModel.clear()

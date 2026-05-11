@@ -79,39 +79,68 @@ Page {
             onClicked: {
                 showPageRequested(5)
             }
+            background: Rectangle {
+                radius: height / 2
+                color: "#1976D2"
+                border.color: "#1976D2"
+                border.width: 1
+            }
+            contentItem: Text {
+                text: parent.text
+                color: "white"
+                font.pixelSize: 14
+                font.bold: true
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
         }
     }
 
     RowLayout {
         anchors.fill: parent
         spacing: 10
+        anchors.margins: 8
 
+        // ----- Кабинеты -----
         ColumnLayout {
             Layout.fillWidth: true
-            Layout.preferredWidth: 1
             Layout.fillHeight: true
             Layout.alignment: Qt.AlignTop
-            anchors.margins: 8
+            spacing: 12
 
             Label {
                 text: "Кабинеты"
                 font.bold: true
+                font.pixelSize: 16
             }
 
             ScrollView {
                 Layout.fillWidth: true
+                Layout.fillHeight: true
+                clip: true
+                padding: 8
+                background: Rectangle {
+                    color: "#f5f5f5"
+                    radius: 8
+                }
 
                 ListView {
                     id: roomsListView
                     width: parent.width
                     model: roomModel
+                    spacing: 8
+                    clip: true
                     delegate: Rectangle {
                         width: roomsListView.width
-                        height: 48
-                        color: "transparent"
+                        height: 56
+                        radius: 12
+                        border.color: "#1976D2"
+                        border.width: 1.5
+                        color: "#fafafa"
+
                         RowLayout {
                             anchors.fill: parent
-                            anchors.margins: 4
+                            anchors.margins: 8
                             spacing: 8
 
                             TextField {
@@ -119,10 +148,17 @@ Page {
                                 text: name
                                 placeholderText: "Название кабинета"
                                 Layout.fillWidth: true
+                                font.pixelSize: 16
                                 onEditingFinished: {
                                     var ind = roomsListView.model.index(index, 0)
                                     roomsListView.model.setData(ind, text, 1)
                                     console.log("Изменено имя:", text)
+                                }
+                                background: Rectangle {
+                                    radius: height / 2
+                                    color: parent.focus ? "#e8f0fe" : "#f5f5f5"
+                                    border.color: "#c0c0c0"
+                                    border.width: 1.5
                                 }
                             }
 
@@ -135,13 +171,35 @@ Page {
                                     roomsListView.model.setData(idx, currentText, 2)
                                     console.log("Изменён размер для", name, "->", currentText)
                                 }
+                                background: Rectangle {
+                                    radius: height / 5
+                                    color: parent.focus ? "#e8f0fe" : "#f5f5f5"
+                                    border.color: "#c0c0c0"
+                                    border.width: 1.5
+                                    implicitHeight: 25
+                                }
+                                font.pixelSize: 16
                             }
 
                             Button {
-                                text: "Удалить"
+                                text: "✕"
                                 onClicked: {
                                     roomModel.removeAt(index)
                                     console.log("Удаляем кабинет:", name)
+                                }
+                                background: Rectangle {
+                                    radius: height / 2
+                                    color: parent.hovered ? "#ffcdd2" : "#f5f5f5"
+                                    border.color: "#d32f2f"
+                                    border.width: 1
+                                }
+                                contentItem: Text {
+                                    text: parent.text
+                                    font.pixelSize: 14
+                                    font.bold: true
+                                    color: "#d32f2f"
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
                                 }
                             }
                         }
@@ -149,9 +207,7 @@ Page {
                 }
             }
 
-            Item { // Костыль
-                Layout.fillHeight: true
-            }
+            Item { Layout.fillHeight: true }
 
             RowLayout {
                 Layout.fillWidth: true
@@ -161,7 +217,14 @@ Page {
                     id: newRoomName
                     placeholderText: "Новое название кабинета"
                     Layout.fillWidth: true
+                    font.pixelSize: 16
                     onAccepted: addRoom()
+                    background: Rectangle {
+                        radius: height / 2
+                        color: parent.focus ? "#e8f0fe" : "#f5f5f5"
+                        border.color: "#1976D2"
+                        border.width: 1.5
+                    }
                 }
 
                 ComboBox {
@@ -169,57 +232,90 @@ Page {
                     model: ["Маленький", "Большой"]
                     currentIndex: 0
                     Layout.preferredWidth: 120
+                    font.pixelSize: 16
+                    background: Rectangle {
+                        radius: height / 4
+                        color: parent.focus ? "#c0c0c0" : "#f5f5f5"
+                        border.color: "#778899"
+                        border.width: 1.5
+                        implicitHeight: 25
+                    }
                 }
 
                 Button {
                     text: "Добавить"
                     onClicked: {
                         var name = newRoomName.text.trim()
-                        if (name.length === 0) {
-                            console.log("Имя кабинета пустое - пропускаем")
-                            return
-                        }
+                        if (name.length === 0) return
                         roomModel.appendRoom(name, newRoomSize.currentText)
                         newRoomName.text = ""
                         newRoomName.forceActiveFocus()
                         console.log("Добавлен кабинет:", name, newRoomSize.currentText)
                     }
+                    background: Rectangle {
+                        radius: 5
+                        color: "#1976D2"
+                        border.color: "#1976D2"
+                        border.width: 1
+                    }
+                    contentItem: Text {
+                        text: parent.text
+                        color: "white"
+                        font.pixelSize: 14
+                        font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
                 }
             }
         }
 
+        // ----- Учителя -----
         ColumnLayout {
             Layout.fillWidth: true
-            Layout.preferredWidth: 1
             Layout.fillHeight: true
             Layout.alignment: Qt.AlignTop
-            anchors.margins: 8
+            spacing: 12
 
             Label {
                 text: "Учителя"
                 font.bold: true
+                font.pixelSize: 16
             }
 
             ScrollView {
                 Layout.fillWidth: true
+                Layout.fillHeight: true
+                clip: true
+                padding: 8
+                background: Rectangle {
+                    color: "#f5f5f5"
+                    radius: 8
+                }
 
                 ListView {
                     id: teachersListView
                     width: parent.width
                     model: teacherModel
+                    spacing: 8
+                    clip: true
                     delegate: Rectangle {
-                        width: parent.width
-                        height: 48
-                        color: "transparent"
+                        width: teachersListView.width
+                        height: 56
+                        radius: 12
+                        border.color: "#1976D2"
+                        border.width: 1.5
+                        color: "#fafafa"
 
                         RowLayout {
                             anchors.fill: parent
-                            anchors.margins: 4
+                            anchors.margins: 8
                             spacing: 8
 
                             Label {
                                 text: surname + " " + name[0] + ". " + patronymic[0] + "."
-
+                                font.pixelSize: 16
+                                Layout.fillWidth: true
                                 MouseArea {
                                     anchors.fill: parent
                                     onClicked: {
@@ -231,15 +327,27 @@ Page {
                                 }
                             }
 
-                            Item { // Костыль, Label и Button у левой и правой границы соответственно
-                                Layout.fillWidth: true
-                            }
+                            Item { Layout.fillWidth: true }
 
                             Button {
-                                text: "Удалить"
+                                text: "✕"
                                 onClicked: {
                                     teacherModel.removeAt(index)
                                     console.log("Удаляем учителя:", name)
+                                }
+                                background: Rectangle {
+                                    radius: height / 2
+                                    color: parent.hovered ? "#ffcdd2" : "#f5f5f5"
+                                    border.color: "#d32f2f"
+                                    border.width: 1
+                                }
+                                contentItem: Text {
+                                    text: parent.text
+                                    font.pixelSize: 14
+                                    font.bold: true
+                                    color: "#d32f2f"
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
                                 }
                             }
                         }
@@ -247,13 +355,12 @@ Page {
                 }
             }
 
-            Item { // Костыль, Button снизу
-                Layout.fillHeight: true
-            }
+            Item { Layout.fillHeight: true }
 
             RowLayout {
                 Layout.fillWidth: true
                 Layout.alignment: Qt.AlignHCenter
+
                 Button {
                     text: "Добавить"
                     onClicked: {
@@ -261,42 +368,71 @@ Page {
                         appState.teacherIsNew = true
                         showPageRequested(3)
                     }
+                    background: Rectangle {
+                        radius: 5
+                        color: "#1976D2"
+                        border.color: "#1976D2"
+                        border.width: 1
+                    }
+                    contentItem: Text {
+                        text: parent.text
+                        color: "white"
+                        font.pixelSize: 14
+                        font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
                 }
             }
         }
 
+        // ----- Классы -----
         ColumnLayout {
             Layout.fillWidth: true
-            Layout.preferredWidth: 1
             Layout.fillHeight: true
             Layout.alignment: Qt.AlignTop
-            anchors.margins: 8
+            spacing: 12
 
             Label {
                 text: "Классы"
                 font.bold: true
+                font.pixelSize: 16
             }
+
             ScrollView {
                 Layout.fillWidth: true
+                Layout.fillHeight: true
+                clip: true
+                padding: 8
+                background: Rectangle {
+                    color: "#f5f5f5"
+                    radius: 8
+                }
 
                 ListView {
                     id: klassListView
                     width: parent.width
                     model: classModel
+                    spacing: 8
+                    clip: true
                     delegate: Rectangle {
-                        width: parent.width
-                        height: 48
-                        color: "transparent"
+                        width: klassListView.width
+                        height: 56
+                        radius: 12
+                        border.color: "#1976D2"
+                        border.width: 1.5
+                        color: "#fafafa"
 
                         RowLayout {
                             anchors.fill: parent
-                            anchors.margins: 4
+                            anchors.margins: 8
                             spacing: 8
 
                             Label {
                                 id: nameClass
                                 text: name
-
+                                font.pixelSize: 16
+                                Layout.fillWidth: true
                                 MouseArea {
                                     anchors.fill: parent
                                     onClicked: {
@@ -307,15 +443,27 @@ Page {
                                 }
                             }
 
-                            Item { // Костыль, Label и Button у левой и правой границы соответственно
-                                Layout.fillWidth: true
-                            }
+                            Item { Layout.fillWidth: true }
 
                             Button {
-                                text: "Удалить"
+                                text: "✕"
                                 onClicked: {
                                     classModel.removeAt(index)
                                     console.log("Удаляем класс:", name)
+                                }
+                                background: Rectangle {
+                                    radius: height / 2
+                                    color: parent.hovered ? "#ffcdd2" : "#f5f5f5"
+                                    border.color: "#d32f2f"
+                                    border.width: 1
+                                }
+                                contentItem: Text {
+                                    text: parent.text
+                                    font.pixelSize: 14
+                                    font.bold: true
+                                    color: "#d32f2f"
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
                                 }
                             }
                         }
@@ -323,34 +471,49 @@ Page {
                 }
             }
 
-            Item { // Костыль, Button снизу
-                Layout.fillHeight: true
-            }
+            Item { Layout.fillHeight: true }
 
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 8
-                Layout.alignment: Qt.AlignHCenter
 
                 TextField {
                     id: newClassName
                     placeholderText: "Название класса"
                     Layout.fillWidth: true
+                    font.pixelSize: 16
                     onAccepted: addClass()
+                    background: Rectangle {
+                        radius: height / 2
+                        color: parent.focus ? "#e8f0fe" : "#f5f5f5"
+                        border.color: "#1976D2"
+                        border.width: 1.5
+                    }
                 }
 
                 Button {
                     text: "Добавить"
                     onClicked: {
                         var name = newClassName.text.trim()
-                        if (name.length === 0) {
-                            console.log("Имя класса пустое - пропускаем")
-                            return
-                        }
+                        if (name.length === 0) return
                         classModel.appendClass(name)
                         newClassName.text = ""
                         newClassName.forceActiveFocus()
                         console.log("Добавлен класс:", name)
+                    }
+                    background: Rectangle {
+                        radius: 5
+                        color: "#1976D2"
+                        border.color: "#1976D2"
+                        border.width: 1
+                    }
+                    contentItem: Text {
+                        text: parent.text
+                        color: "white"
+                        font.pixelSize: 14
+                        font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
                     }
                 }
             }

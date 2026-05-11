@@ -12,12 +12,12 @@ Page {
 
     ListModel {
         id: weekDays
-        ListElement{day: "Понедельник"; checked: false}
-        ListElement{day: "Вторник"; checked: false}
-        ListElement{day: "Среда"; checked: false}
-        ListElement{day: "Четверг"; checked: false}
-        ListElement{day: "Пятница"; checked: false}
-        ListElement{day: "Суббота"; checked: false}
+        ListElement { day: "Понедельник"; checked: false }
+        ListElement { day: "Вторник"; checked: false }
+        ListElement { day: "Среда"; checked: false }
+        ListElement { day: "Четверг"; checked: false }
+        ListElement { day: "Пятница"; checked: false }
+        ListElement { day: "Суббота"; checked: false }
     }
 
     header: ToolBar {
@@ -31,229 +31,365 @@ Page {
         Label {
             text: isNew ? "Добавить учителя" : "Информация об учителе"
             font.bold: true
+            font.pixelSize: 18
             anchors.centerIn: parent
         }
     }
 
-    RowLayout {
-        anchors.margins: 8
-        anchors.left: parent.left
-        anchors.right: parent.right
-        spacing: 10
-
-        TextField {
-            id: teacherSurName
-            placeholderText: "Фамилия"
-            Layout.fillWidth: true
-        }
-
-        TextField {
-            id: teacherName
-            placeholderText: "Имя"
-            Layout.fillWidth: true
-        }
-
-        TextField {
-            id: teacherPatronymic
-            placeholderText: "Отчество"
-            Layout.fillWidth: true
-        }
-    }
-
-    GridLayout {
+    ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 50
-        rows: 5
-        columns: 2
-        rowSpacing: 20
-        columnSpacing: 10
+        spacing: 12
+        anchors.margins: 16
 
-        Item{
-            Label {
-                text: "Предметы"
-                font.bold: true
-            }
-        }
-
-        Item{
-
-        }
-
-        Item{
+        // ФИО
+        RowLayout {
             Layout.fillWidth: true
-            Layout.fillHeight: true
+            spacing: 10
+
             TextField {
-                id: teacherSubject1
-                placeholderText: "Название предмета"
+                id: teacherSurName
+                placeholderText: "Фамилия"
                 Layout.fillWidth: true
+                font.pixelSize: 16
+                background: Rectangle {
+                    radius: height / 2
+                    color: parent.focus ? "#e8f0fe" : "#f5f5f5"
+                    border.color: "#1976D2"
+                    border.width: 1.5
+                }
+            }
+            TextField {
+                id: teacherName
+                placeholderText: "Имя"
+                Layout.fillWidth: true
+                font.pixelSize: 16
+                background: Rectangle {
+                    radius: height / 2
+                    color: parent.focus ? "#e8f0fe" : "#f5f5f5"
+                    border.color: "#1976D2"
+                    border.width: 1.5
+                }
+            }
+            TextField {
+                id: teacherPatronymic
+                placeholderText: "Отчество"
+                Layout.fillWidth: true
+                font.pixelSize: 16
+                background: Rectangle {
+                    radius: height / 2
+                    color: parent.focus ? "#e8f0fe" : "#f5f5f5"
+                    border.color: "#1976D2"
+                    border.width: 1.5
+                }
             }
         }
 
-        Item{
+        GridLayout {
+            columns: 2
+            rows: 5
+            rowSpacing: 20
+            columnSpacing: 10
             Layout.fillWidth: true
             Layout.fillHeight: true
-            RowLayout{
 
-                Label{
-                    text: "Классное руководство"
+            // Заголовок "Предметы"
+            Item {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Label {
+                    text: "Предметы"
+                    font.bold: true
+                    font.pixelSize: 16
+                    anchors.left: parent.left
+                    anchors.leftMargin: 4
+                    anchors.verticalCenter: parent.verticalCenter
                 }
+            }
+            Item { }
 
+            // Первое поле предмета
+            Item {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
                 TextField {
-                    id: classTeacher
-                    placeholderText: "Классы"
+                    id: teacherSubject1
+                    placeholderText: "Название предмета"
                     Layout.fillWidth: true
+                    font.pixelSize: 16
+                    anchors.verticalCenter: parent.verticalCenter
+                    background: Rectangle {
+                        radius: height / 2
+                        color: parent.focus ? "#e8f0fe" : "#f5f5f5"
+                        border.color: "#1976D2"
+                        border.width: 1.5
+                    }
                 }
             }
-        }
-
-        Item{
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            TextField {
-                //id: teacherSubject2
-                placeholderText: "Название предмета"
+            // Классное руководство
+            Item {
                 Layout.fillWidth: true
-            }
-        }
-
-        Item{
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            RowLayout{
-
-                Label{
-                    text: "Личный кабинет"
-                }
-
-                TextField {
-                    placeholderText: "Название кабинета"
-                    Layout.fillWidth: true
-                }
-            }
-        }
-
-        Item{
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            TextField {
-                id: teacherSubject3
-                placeholderText: "Название предмета"
-                Layout.fillWidth: true
-            }
-        }
-
-        Item {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            Column {
-                spacing: 5
-
-                Repeater {
-                    id: weekRepeater
-                    model: weekDays
-
-                    Row {
-                        spacing: 10
-                        Rectangle {
-                            id: checkBox
-                            width: 15
-                            height: 15
-                            border.color: "gray"
-                            color: model.checked ? "lightgreen" : "white"
-
-                            property bool checked: false
-
-                            Text {
-                                text: "✓"
-                                font.pixelSize: 15
-                                color: "green"
-                                anchors.centerIn: parent
-                                visible: model.checked
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                onClicked: {
-                                    weekDays.setProperty(index, "checked", !model.checked)
-                                }
-                            }
-                        }
-                        Label {
-                            text: day
+                Layout.fillHeight: true
+                RowLayout {
+                    anchors.fill: parent
+                    spacing: 8
+                    Label {
+                        text: "Классное руководство"
+                        font.pixelSize: 16
+                    }
+                    TextField {
+                        id: classTeacher
+                        placeholderText: "Классы"
+                        Layout.fillWidth: true
+                        font.pixelSize: 16
+                        background: Rectangle {
+                            radius: height / 2
+                            color: parent.focus ? "#e8f0fe" : "#f5f5f5"
+                            border.color: "#1976D2"
+                            border.width: 1.5
                         }
                     }
                 }
             }
 
+            // Второе поле предмета
+            Item {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                TextField {
+                    id: teacherSubject2
+                    placeholderText: "Название предмета"
+                    Layout.fillWidth: true
+                    font.pixelSize: 16
+                    anchors.verticalCenter: parent.verticalCenter
+                    background: Rectangle {
+                        radius: height / 2
+                        color: parent.focus ? "#e8f0fe" : "#f5f5f5"
+                        border.color: "#1976D2"
+                        border.width: 1.5
+                    }
+                }
+            }
+            // Личный кабинет
+            Item {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                RowLayout {
+                    anchors.fill: parent
+                    spacing: 8
+                    Label {
+                        text: "Личный кабинет"
+                        font.pixelSize: 16
+                    }
+                    TextField {
+                        id: teacherCabinet
+                        placeholderText: "Название кабинета"
+                        Layout.fillWidth: true
+                        font.pixelSize: 16
+                        background: Rectangle {
+                            radius: height / 2
+                            color: parent.focus ? "#e8f0fe" : "#f5f5f5"
+                            border.color: "#1976D2"
+                            border.width: 1.5
+                        }
+                    }
+                }
+            }
+
+            // Третье поле предмета
+            Item {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                TextField {
+                    id: teacherSubject3
+                    placeholderText: "Название предмета"
+                    Layout.fillWidth: true
+                    font.pixelSize: 16
+                    anchors.verticalCenter: parent.verticalCenter
+                    background: Rectangle {
+                        radius: height / 2
+                        color: parent.focus ? "#e8f0fe" : "#f5f5f5"
+                        border.color: "#1976D2"
+                        border.width: 1.5
+                    }
+                }
+            }
+            // Рабочие дни
+            Item {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.margins: 4
+                    color: "transparent"
+                    radius: 8
+                    Column {
+                        spacing: 5
+                        anchors.centerIn: parent
+                        Repeater {
+                            model: weekDays
+                            delegate: Row {
+                                spacing: 10
+                                Rectangle {
+                                    width: 20
+                                    height: 20
+                                    radius: 4
+                                    border.color: "#1976D2"
+                                    border.width: 1.5
+                                    color: model.checked ? "#1976D2" : "white"
+                                    Text {
+                                        text: "✓"
+                                        font.pixelSize: 14
+                                        color: "white"
+                                        anchors.centerIn: parent
+                                        visible: model.checked
+                                    }
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        onClicked: weekDays.setProperty(index, "checked", !model.checked)
+                                    }
+                                }
+                                Label {
+                                    text: day
+                                    font.pixelSize: 16
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Кнопка "Добавить предмет"
+            Item {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Button {
+                    text: "Добавить предмет"
+                    anchors.left: parent.left
+                    anchors.leftMargin: 4
+                    anchors.verticalCenter: parent.verticalCenter
+                    onClicked: console.log("Нажата кнопка добавления предмета")
+                    background: Rectangle {
+                        radius: height / 2
+                        color: parent.hovered ? "#e3f2fd" : "#f5f5f5"
+                        border.color: "#1976D2"
+                        border.width: 1.5
+                    }
+                    contentItem: Text {
+                        text: parent.text
+                        font.pixelSize: 16
+                        font.bold: true
+                        color: "#1976D2"
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                }
+            }
+            Item { }
         }
-        Item{
+
+        // Нижние кнопки
+        RowLayout {
             Layout.fillWidth: true
-            Layout.fillHeight: true
+            spacing: 16
+
             Button {
-                text: "Добавить предмет"
+                id: addButton
+                visible: appState.teacherIsNew === true
+                text: "Добавить"
+                Layout.fillWidth: true
                 onClicked: {
-                    console.log("Нажата кнопка добавления предмета");
+                    var data = collectFormData()
+                    console.log("Добавление учителя:", JSON.stringify(data))
+                    model.appendTeacher(data.surname, data.name, data.patronymic, "subject", data.weekdays)
+                    showPageRequested(2)
+                }
+                background: Rectangle {
+                    radius: height / 2
+                    color: "#1976D2"
+                    border.color: "#1976D2"
+                    border.width: 1
+                }
+                contentItem: Text {
+                    text: parent.text
+                    font.pixelSize: 16
+                    font.bold: true
+                    color: "white"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+            }
+
+            Button {
+                id: saveButton
+                visible: appState.teacherIsNew === false
+                text: "Сохранить изменения"
+                Layout.fillWidth: true
+                onClicked: {
+                    var data = collectFormData()
+                    console.log(data)
+                    appState.teacherModel.setData(appState.teacherModel.index(appState.teacherIndex, 0), data.surname, 0)
+                    appState.teacherModel.setData(appState.teacherModel.index(appState.teacherIndex, 0), data.name, 1)
+                    appState.teacherModel.setData(appState.teacherModel.index(appState.teacherIndex, 0), data.patronymic, 2)
+                    appState.teacherModel.setData(appState.teacherModel.index(appState.teacherIndex, 0), "subject", 3)
+                    appState.teacherModel.setData(appState.teacherModel.index(appState.teacherIndex, 0), data.weekdays, 4)
+                    showPageRequested(2)
+                }
+                background: Rectangle {
+                    radius: height / 2
+                    color: "#1976D2"
+                    border.color: "#1976D2"
+                    border.width: 1
+                }
+                contentItem: Text {
+                    text: parent.text
+                    font.pixelSize: 16
+                    font.bold: true
+                    color: "white"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+            }
+
+            Button {
+                text: "Отмена"
+                Layout.fillWidth: true
+                onClicked: showPageRequested(2)
+                background: Rectangle {
+                    radius: height / 2
+                    color: "#f0f0f0"
+                    border.color: "#1976D2"
+                    border.width: 2
+                }
+                contentItem: Text {
+                    text: parent.text
+                    font.pixelSize: 16
+                    font.bold: true
+                    color: "#1976D2"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
                 }
             }
         }
     }
 
-    RowLayout {
-        Layout.fillWidth: true
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        anchors.margins: 16
-
-        Button {
-            id: addButton
-            visible: appState.teacherIsNew === true
-            text: "Добавить"
-            onClicked: {
-                var data = collectFormData()
-                console.log("Добавление учителя:", JSON.stringify(data))
-                model.appendTeacher(data.surname, data.name, data.patronymic, "subject", data.weekdays)
-                showPageRequested(2)
-            }
-        }
-
-        Button {
-            id: saveButton
-            visible: appState.teacherIsNew === false
-            text: "Сохранить изменения"
-            onClicked: {
-                var data = collectFormData()
-                console.log(data)
-                appState.teacherModel.setData(appState.teacherModel.index(appState.teacherIndex, 0), data.surname, 0)
-                appState.teacherModel.setData(appState.teacherModel.index(appState.teacherIndex, 0), data.name, 1)
-                appState.teacherModel.setData(appState.teacherModel.index(appState.teacherIndex, 0), data.patronymic, 2)
-                appState.teacherModel.setData(appState.teacherModel.index(appState.teacherIndex, 0), "subject", 3)
-                appState.teacherModel.setData(appState.teacherModel.index(appState.teacherIndex, 0), data.weekdays, 4)
-                showPageRequested(2)
-            }
-        }
-    }
-
+    // Загрузка данных
     onVisibleChanged: {
         if (visible) {
-            if (appState.teacherIsNew)
-            {
+            if (appState.teacherIsNew) {
                 teacherSurName.text = ""
                 teacherName.text = ""
                 teacherPatronymic.text = ""
-                for (var i = 0; i < weekDays.count; ++i) {
+                for (var i = 0; i < weekDays.count; ++i)
                     weekDays.setProperty(i, "checked", false)
-                }
-            }
-            else
-            {
+            } else {
                 var teacherObj = appState.teacherModel.teacherAt(appState.teacherIndex);
                 console.log(teacherObj.workingDays)
                 teacherSurName.text = teacherObj.surname
                 teacherName.text = teacherObj.name
                 teacherPatronymic.text = teacherObj.patronymic
-                for (var j = 0; j < weekDays.count; ++j) {
-                    weekDays.setProperty(j, "checked", teacherObj.workingDays[j])
+                if (teacherObj.workingDays) {
+                    for (var j = 0; j < weekDays.count; ++j)
+                        weekDays.setProperty(j, "checked", teacherObj.workingDays[j])
                 }
             }
         }
@@ -261,10 +397,8 @@ Page {
 
     function collectFormData() {
         var weekdaysArr = []
-        for (var i = 0; i < weekDays.count; ++i) {
+        for (var i = 0; i < weekDays.count; ++i)
             weekdaysArr.push(weekDays.get(i).checked)
-        }
-
         return {
             surname: teacherSurName.text,
             name: teacherName.text,
