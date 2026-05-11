@@ -20,7 +20,7 @@ struct LessonAssignment {
     QString lessonName;
 };
 
-static constexpr double kMaxDoubleSharePerPair = 3.0 / 7.0;
+static constexpr double kMaxDoubleSharePerPair = 4.0 / 7.0;
 
 class TimetableModel : public QAbstractTableModel
 {
