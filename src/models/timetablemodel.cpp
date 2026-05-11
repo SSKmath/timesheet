@@ -299,13 +299,14 @@ QVariant TimetableModel::headerData(int section, Qt::Orientation orientation, in
     }
 
     static const QStringList days = {
-        "Понедельник", "Вторник", "Среда", "Четверг", "Пятница"
+        "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"
     };
 
     if (m_slotCount <= 0)
         return QString("Slot %1").arg(section + 1);
 
-    const int slotsPerDay = qMax(1, (m_slotCount + 4) / 5);
+    const int dayCount = days.size();
+    const int slotsPerDay = qMax(1, (m_slotCount + dayCount - 1) / dayCount);
     const int dayIndex = section / slotsPerDay;
     const int slotIndex = (section % slotsPerDay) + 1;
 
@@ -767,7 +768,7 @@ QList<Lesson*> selectOneClassLessons(QList<Lesson*> &candidates, int limit)
 // Перебор с отсечениями для уроков с двумя классами
 // ------------------------------------------------------------
 
-static QList<Lesson*> selectTwoClassLessons(QList<Lesson*> candidates, int limit, int attempts = 32)
+static QList<Lesson*> selectTwoClassLessons(QList<Lesson*> candidates, int limit, int attempts = 128)
 {
     QList<Lesson*> best;
 

@@ -35,7 +35,7 @@ Page {
         appState.timetableModel.setRoomModel(roomModel)
         appState.timetableModel.setLessonModel(lessonModel)
         appState.timetableModel.setRoomCount(roomModel ? roomModel.rowCount() : 0)
-        appState.timetableModel.setSlotCount(5 * 8)
+        appState.timetableModel.setSlotCount(6 * 8)
 
         console.log("Загружена школа:", schoolName, "с комнатами из C++ модели")
     }
