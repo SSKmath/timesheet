@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Controls.Basic
 
 Page {
     id: schoolDtailsPage
@@ -167,10 +168,14 @@ Page {
                                 id: sizeCombo
                                 model: ["Маленький", "Большой"]
                                 currentIndex: size === "Большой" ? 1 : 0
-                                onCurrentTextChanged: {
-                                    var idx = roomsListView.model.index(index, 0)
-                                    roomsListView.model.setData(idx, currentText, 2)
-                                    console.log("Изменён размер для", name, "->", currentText)
+                                onActivated: function(index) {
+                                    var newText = sizeCombo.model[index]
+                                    if (newText === size)   // ничего не изменилось
+                                        return
+
+                                    var idx = roomsListView.model.index(model.index, 0)
+                                    roomsListView.model.setData(idx, newText, 2)
+                                    console.log("Изменён размер для", name, "->", newText)
                                 }
                                 background: Rectangle {
                                     radius: height / 5
