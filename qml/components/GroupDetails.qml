@@ -61,7 +61,12 @@ Page {
                 Layout.preferredWidth: 260
                 Layout.alignment: Qt.AlignVCenter
                 font.pixelSize: 16
-                background: ovalTextFieldBackground
+                background: Rectangle {
+                    radius: height / 2
+                    color: parent.focus ? "#e8f0fe" : "#f5f5f5"
+                    border.color: "#778899"
+                    border.width: 1.5
+                }
             }
         }
 
@@ -92,7 +97,7 @@ Page {
                     width: subjectListView.width
                     height: visible ? 56 : 0
                     color: "transparent"
-                    visible: classes.includes(schoolclassModel.id)
+                    visible: classes.includes(id)
 
                     // Внешняя рамка вокруг каждого предмета
                     Rectangle {
@@ -119,7 +124,12 @@ Page {
                                 var ind = subjectListView.model.index(index, 0)
                                 lessonModel.setData(ind, text, 2)
                             }
-                            background: ovalTextFieldBackground
+                            background: Rectangle {
+                                radius: height / 2
+                                color: parent.focus ? "#e8f0fe" : "#f5f5f5"
+                                border.color: "#778899"
+                                border.width: 1.5
+                            }
                         }
 
                         Label {
@@ -216,7 +226,13 @@ Page {
                                     lessonModel.setData(lessonIndex, selectedTeacherId, 4)
                                 }
                             }
-                            background: ovalComboBoxBackground
+                            background: Rectangle {
+                                radius: height / 2
+                                color: parent.focus ? "#e8f0fe" : "#f5f5f5"
+                                border.color: "#778899"
+                                border.width: 1.5
+                                implicitHeight: 40
+                            }
                         }
 
                         // Парный (рамка)
@@ -231,7 +247,13 @@ Page {
                                 var ind = subjectListView.model.index(index, 0)
                                 lessonModel.setData(ind, pairCombo.currentText === "Парный", 3)
                             }
-                            background: ovalComboBoxBackground
+                            background: Rectangle {
+                                radius: height / 2
+                                color: parent.focus ? "#e8f0fe" : "#f5f5f5"
+                                border.color: "#778899"
+                                border.width: 1.5
+                                implicitHeight: 40
+                            }
                         }
 
                         // Кнопка удаления (без рамки)
@@ -273,7 +295,12 @@ Page {
                 placeholderText: "Название предмета"
                 Layout.fillWidth: true
                 font.pixelSize: 16
-                background: ovalTextFieldBackground
+                background: Rectangle {
+                    radius: height / 2
+                    color: parent.focus ? "#e8f0fe" : "#f5f5f5"
+                    border.color: "#778899"
+                    border.width: 1.5
+                }
             }
 
             // Преподаватель (рамка)
@@ -299,7 +326,13 @@ Page {
                         currentChoiseTeacher = model.id
                     }
                 }
-                background: ovalComboBoxBackground
+                background: Rectangle {
+                    radius: height / 2
+                    color: parent.focus ? "#e8f0fe" : "#f5f5f5"
+                    border.color: "#778899"
+                    border.width: 1.5
+                    implicitHeight: 40
+                }
             }
 
             // Парный (рамка)
@@ -308,7 +341,13 @@ Page {
                 model: ["Парный", "Одинарный"]
                 Layout.preferredWidth: 100
                 font.pixelSize: 16
-                background: ovalComboBoxBackground
+                background: Rectangle {
+                    radius: height / 2
+                    color: parent.focus ? "#e8f0fe" : "#f5f5f5"
+                    border.color: "#778899"
+                    border.width: 1.5
+                    implicitHeight: 40
+                }
             }
 
             // Кнопка "Добавить" (рамка)
@@ -397,27 +436,6 @@ Page {
                     showPageRequested(2)
                 }
             }
-        }
-    }
-
-    Component {
-        id: ovalTextFieldBackground
-        Rectangle {
-            radius: height / 2
-            color: parent.focus ? "#e8f0fe" : "#f5f5f5"
-            border.color: "#778899"
-            border.width: 1.5
-        }
-    }
-
-    Component {
-        id: ovalComboBoxBackground
-        Rectangle {
-            radius: height / 2
-            color: parent.focus ? "#e8f0fe" : "#f5f5f5"
-            border.color: "#778899"
-            border.width: 1.5
-            implicitHeight: 40
         }
     }
 }

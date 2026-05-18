@@ -34,6 +34,7 @@ Page {
 
         appState.timetableModel.setRoomModel(roomModel)
         appState.timetableModel.setLessonModel(lessonModel)
+        appState.timetableModel.setTeacherModel(teacherModel)
         appState.timetableModel.setRoomCount(roomModel ? roomModel.rowCount() : 0)
         appState.timetableModel.setSlotCount(6 * 8)
 

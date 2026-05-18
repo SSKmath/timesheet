@@ -174,6 +174,18 @@ Page {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 40
 
+                    Button {
+                        anchors.centerIn: parent
+                        text: "Очистить"
+                        onClicked: timetableModel.clearAllLessons()
+                    }
+                }
+
+                Rectangle {
+                    color: "#dddddd"
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 40
+
                     Label {
                         anchors.centerIn: parent
                         text: "Неиспользованные уроки"

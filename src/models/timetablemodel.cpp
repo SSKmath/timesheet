@@ -5,6 +5,8 @@
 #include "lesson.h"
 #include "lessonmodel.h"
 #include "school.h"
+#include "teachermodel.h"
+#include "teacher.h"
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
@@ -435,6 +437,31 @@ bool TimetableModel::clearLesson(int row, int column)
     return true;
 }
 
+bool TimetableModel::clearAllLessons()
+{
+    if (m_roomCount <= 0 || m_slotCount <= 0)
+        return false;
+
+    if (m_cells.isEmpty())
+        return true;
+
+    beginResetModel();
+
+    for (LessonAssignment &cell : m_cells) {
+        cell.lessonId.clear();
+        cell.lessonName.clear();
+    }
+
+    endResetModel();
+
+    ++m_lessonUsageRevision;
+    emit lessonUsageChanged();
+
+    saveToStorage();
+
+    return true;
+}
+
 void TimetableModel::setRoomCount(int count)
 {
     if (count < 0 || count == m_roomCount)
@@ -555,13 +582,44 @@ void TimetableModel::setLessonModel(QObject *lessonModel)
     tryLoadFromStorage();
 }
 
-
+void TimetableModel::setTeacherModel(QObject *teacherModel)
+{
+    m_teacherModel = teacherModel;
+    m_loadedSignature.clear();
+    tryLoadFromStorage();
+}
 
 
 
 // ============================================================
 // Вспомогательные структуры и функции
 // ============================================================
+
+int TimetableModel::dayIndexForRow(int row) const
+{
+    static const int kDayCount = 6; // Пн–Сб
+    const int slotsPerDay = qMax(1, (m_slotCount + kDayCount - 1) / kDayCount);
+    const int dayIndex = row / slotsPerDay;
+    return (dayIndex >= 0 && dayIndex < kDayCount) ? dayIndex : -1;
+}
+
+bool TimetableModel::teacherCanWorkOnDay(int teacherId, int dayIndex) const
+{
+    if (dayIndex < 0 || dayIndex >= 6 || !m_teacherModel)
+        return false;
+
+    TeacherModel *teacherModel = qobject_cast<TeacherModel *>(m_teacherModel);
+    if (!teacherModel)
+        return false;
+
+    QObject *obj = teacherModel->teacherById(teacherId);
+    Teacher *teacher = qobject_cast<Teacher *>(obj);
+    if (!teacher)
+        return false;
+
+    const QList<bool> days = teacher->workingDays();
+    return dayIndex < days.size() && days[dayIndex];
+}
 
 template <typename T>
 static void shuffleList(QList<T> &list)
@@ -989,6 +1047,8 @@ void TimetableModel::generateDoubleLessons(LessonBuckets &buckets, const std::ma
     {
         const int nextRow = row + 1;
 
+        const int dayRow = dayIndexForRow(row);
+
         std::set<int> usedTeachers;
         std::set<int> usedClasses;
         collectOccupiedResourcesForRows(row, nextRow, lessonById, usedTeachers, usedClasses);
@@ -1012,7 +1072,7 @@ void TimetableModel::generateDoubleLessons(LessonBuckets &buckets, const std::ma
                         continue;
 
                     LessonInfo info = makeLessonInfo(lesson);
-                    if (!conflictsWithUsed(info, usedTeachers, usedClasses))
+                    if (!conflictsWithUsed(info, usedTeachers, usedClasses) && teacherCanWorkOnDay(info.teacherId, dayRow))
                         available.push_back(lesson);
                 }
 
@@ -1075,7 +1135,7 @@ void TimetableModel::generateDoubleLessons(LessonBuckets &buckets, const std::ma
                         continue;
 
                     LessonInfo info = makeLessonInfo(lesson);
-                    if (!conflictsWithUsed(info, usedTeachers, usedClasses))
+                    if (!conflictsWithUsed(info, usedTeachers, usedClasses) && teacherCanWorkOnDay(info.teacherId, dayRow))
                         available.push_back(lesson);
                 }
 
@@ -1133,6 +1193,10 @@ void TimetableModel::generateSingleLessons(LessonBuckets &buckets,
 {
     for (int row = 0; row < m_slotCount && (!buckets.singleOneClass.isEmpty() || !buckets.singleTwoClass.isEmpty()); ++row)
     {
+        const int day = dayIndexForRow(row);
+        if (day < 0)
+            continue;
+
         std::set<int> usedTeachers;
         std::set<int> usedClasses;
         collectOccupiedResourcesForRow(row, lessonById, usedTeachers, usedClasses);
@@ -1149,7 +1213,7 @@ void TimetableModel::generateSingleLessons(LessonBuckets &buckets,
                         continue;
 
                     LessonInfo info = makeLessonInfo(lesson);
-                    if (!conflictsWithUsed(info, usedTeachers, usedClasses))
+                    if (!conflictsWithUsed(info, usedTeachers, usedClasses) && teacherCanWorkOnDay(info.teacherId, day))
                         available.push_back(lesson);
                 }
 
@@ -1207,7 +1271,7 @@ void TimetableModel::generateSingleLessons(LessonBuckets &buckets,
                         continue;
 
                     LessonInfo info = makeLessonInfo(lesson);
-                    if (!conflictsWithUsed(info, usedTeachers, usedClasses))
+                    if (!conflictsWithUsed(info, usedTeachers, usedClasses) && teacherCanWorkOnDay(info.teacherId, day))
                         available.push_back(lesson);
                 }
 

@@ -49,6 +49,7 @@ public:
     Q_INVOKABLE void setSlotCount(int count);
     Q_INVOKABLE void setRoomModel(QObject *roomModel);
     Q_INVOKABLE void setLessonModel(QObject *lessonModel);
+    Q_INVOKABLE void setTeacherModel(QObject *teacherModel);
 
     bool moveLessonToCell(int row, int column, const QString &lessonId, const QString &lessonName);
 
@@ -57,6 +58,7 @@ public:
     bool setLessonAtCell(int row, int column, const QString &lessonId, const QString &lessonName);
 
     Q_INVOKABLE bool clearLesson(int row, int column);
+    Q_INVOKABLE bool clearAllLessons();
 
     Q_INVOKABLE bool isLessonUsed(const QString &lessonId) const;
 
@@ -89,11 +91,15 @@ private:
     QString autosaveFilePath(const QString &schoolId) const;
     bool ensureSchoolTimesheetDir(const QString &schoolId) const;
 
+    bool teacherCanWorkOnDay(int teacherId, int dayIndex) const;
+    int dayIndexForRow(int row) const;
+
     int m_roomCount;
     int m_slotCount;
     QList<LessonAssignment> m_cells;
     QObject *m_roomModel;
     QObject *m_lessonModel;
+    QObject *m_teacherModel;
 
     int m_lessonUsageRevision = 0;
 
