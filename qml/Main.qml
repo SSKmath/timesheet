@@ -18,6 +18,7 @@ ApplicationWindow {
         property int teacherIndex: -1
         property bool teacherIsNew: false
         property var classModel: null
+        property int curChoiseClass: -1 //КОСТЫЛЬ
         property var schoolclassModel: null
         property var lessonModel: null
         property var timetableModel: TimetableModel {}

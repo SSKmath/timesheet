@@ -106,6 +106,8 @@ Page {
         // ----- Кабинеты -----
         ColumnLayout {
             Layout.fillWidth: true
+            Layout.preferredWidth: 1
+            Layout.minimumWidth: 0
             Layout.fillHeight: true
             Layout.alignment: Qt.AlignTop
             spacing: 12
@@ -150,6 +152,8 @@ Page {
                                 text: name
                                 placeholderText: "Название кабинета"
                                 Layout.fillWidth: true
+                                Layout.preferredWidth: 1
+                                Layout.minimumWidth: 0
                                 font.pixelSize: 16
                                 onEditingFinished: {
                                     var ind = roomsListView.model.index(index, 0)
@@ -168,27 +172,34 @@ Page {
                                 id: sizeCombo
                                 model: ["Маленький", "Большой"]
                                 currentIndex: size === "Большой" ? 1 : 0
+
+                                Layout.fillWidth: true
+                                Layout.preferredWidth: 1
+                                Layout.minimumWidth: 0
+
                                 onActivated: function(index) {
                                     var newText = sizeCombo.model[index]
-                                    if (newText === size)   // ничего не изменилось
+                                    if (newText === size)
                                         return
 
                                     var idx = roomsListView.model.index(model.index, 0)
                                     roomsListView.model.setData(idx, newText, 2)
                                     console.log("Изменён размер для", name, "->", newText)
                                 }
+
                                 background: Rectangle {
                                     radius: height / 5
                                     color: parent.focus ? "#e8f0fe" : "#f5f5f5"
                                     border.color: "#c0c0c0"
                                     border.width: 1.5
-                                    implicitHeight: 25
                                 }
                                 font.pixelSize: 16
                             }
 
                             Button {
                                 text: "✕"
+                                Layout.preferredWidth: 36
+                                Layout.minimumWidth: 36
                                 onClicked: {
                                     roomModel.removeAt(index)
                                     console.log("Удаляем кабинет:", name)
@@ -279,6 +290,8 @@ Page {
         // ----- Учителя -----
         ColumnLayout {
             Layout.fillWidth: true
+            Layout.preferredWidth: 1
+            Layout.minimumWidth: 0
             Layout.fillHeight: true
             Layout.alignment: Qt.AlignTop
             spacing: 12
@@ -395,6 +408,8 @@ Page {
         // ----- Классы -----
         ColumnLayout {
             Layout.fillWidth: true
+            Layout.preferredWidth: 1
+            Layout.minimumWidth: 0
             Layout.fillHeight: true
             Layout.alignment: Qt.AlignTop
             spacing: 12
@@ -443,6 +458,7 @@ Page {
                                     anchors.fill: parent
                                     onClicked: {
                                         showPageRequested(4)
+                                        appState.curChoiseClass = index + 1 // КОСТЫЛЬ
                                         appState.schoolclassModel = classModel.classAt(index)
                                         console.log("Показать информацию о классе");
                                     }

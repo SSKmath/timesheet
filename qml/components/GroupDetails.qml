@@ -92,13 +92,13 @@ Page {
                 width: parent.width
                 model: lessonModel
                 clip: true
-                spacing: 8
+                //spacing: 8
 
                 delegate: Rectangle {
                     width: subjectListView.width
-                    height: visible ? 56 : 0
                     color: "transparent"
-                    visible: classes.includes(id)
+                    visible: classes.includes(appState.curChoiseClass)
+                    height: visible ? 56 : 0
 
                     // Внешняя рамка вокруг каждого предмета
                     Rectangle {
@@ -244,10 +244,12 @@ Page {
                             Layout.preferredWidth: 120
                             Layout.alignment: Qt.AlignVCenter
                             font.pixelSize: 16
-                            onCurrentTextChanged: {
+
+                            onActivated: function(comboIndex) {
                                 var ind = subjectListView.model.index(index, 0)
-                                lessonModel.setData(ind, pairCombo.currentText === "Парный", 3)
+                                lessonModel.setData(ind, comboIndex === 0, 3)
                             }
+
                             background: Rectangle {
                                 radius: height / 2
                                 color: parent.focus ? "#e8f0fe" : "#f5f5f5"
