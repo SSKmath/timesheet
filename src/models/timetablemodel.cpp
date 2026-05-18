@@ -389,11 +389,9 @@ bool TimetableModel::placeLesson(int row, int column,
         return false;
 
     if (isLessonDouble(lessonId)) {
-        // Двойной урок должен занять две строки в одном столбце
         if (row + 1 >= m_slotCount)
             return false;
 
-        // 1. Удалить все старые ячейки с этим уроком (если он уже был размещён)
         for (int r = 0; r < m_slotCount; ++r) {
             for (int c = 0; c < m_roomCount; ++c) {
                 const int idx = cellIndex(r, c);
@@ -405,14 +403,12 @@ bool TimetableModel::placeLesson(int row, int column,
             }
         }
 
-        // 2. Проверить, что целевые ячейки (row, column) и (row+1, column) свободны
         const int pos1 = cellIndex(row, column);
         const int pos2 = cellIndex(row + 1, column);
 
         if (!m_cells[pos1].lessonId.isEmpty() || !m_cells[pos2].lessonId.isEmpty())
             return false;
 
-        // 3. Записать урок в обе ячейки
         m_cells[pos1].lessonId = lessonId;
         m_cells[pos1].lessonName = lessonName;
         m_cells[pos2].lessonId = lessonId;
@@ -427,7 +423,6 @@ bool TimetableModel::placeLesson(int row, int column,
         return true;
     }
     else {
-        // Одинарный урок – прежняя логика
         return moveLessonToCell(row, column, lessonId, lessonName);
     }
 }
@@ -477,7 +472,6 @@ bool TimetableModel::clearLesson(int row, int column)
             }
         }
     } else {
-        // Одинарный урок – очистить только эту ячейку
         m_cells[cellIndex(row, column)].lessonId.clear();
         m_cells[cellIndex(row, column)].lessonName.clear();
         emit dataChanged(index(row, column), index(row, column), {LessonIdRole, LessonNameRole});
@@ -641,12 +635,6 @@ void TimetableModel::setTeacherModel(QObject *teacherModel)
     tryLoadFromStorage();
 }
 
-
-
-// ============================================================
-// Вспомогательные структуры и функции
-// ============================================================
-
 int TimetableModel::dayIndexForRow(int row) const
 {
     static const int kDayCount = 6; // Пн–Сб
@@ -772,7 +760,7 @@ LessonBuckets splitLessons(const QList<Lesson*> &allLessons, const std::function
         if (lesson->classes().isEmpty())
             continue;
 
-        const bool isDouble = lesson->isDouble(); // если метод называется иначе — подправь тут
+        const bool isDouble = lesson->isDouble();
         const bool twoClasses = lesson->classes().size() >= 2;
 
         if (isDouble)
@@ -794,10 +782,6 @@ LessonBuckets splitLessons(const QList<Lesson*> &allLessons, const std::function
     return buckets;
 }
 
-// ------------------------------------------------------------
-// Кун для уроков с одним классом:
-// teacher -> class
-// ------------------------------------------------------------
 bool augment(int v, std::map<int, bool> &used, const std::map<int, std::vector<std::pair<int, int>>> &g,
                     std::map<int, std::pair<int, int>> &match)
 {
@@ -883,10 +867,6 @@ QList<Lesson*> selectOneClassLessons(QList<Lesson*> &candidates, int limit)
 
     return result;
 }
-
-// ------------------------------------------------------------
-// Перебор с отсечениями для уроков с двумя классами
-// ------------------------------------------------------------
 
 static QList<Lesson*> selectTwoClassLessons(QList<Lesson*> candidates, int limit, int attempts = 128)
 {
@@ -1013,10 +993,6 @@ std::set<int> occupiedClassesInRow(const std::map<int, Lesson*> &lessonById,
     return occupiedClassesInRows(lessonById, cells, roomCount, row, row);
 }
 
-// ============================================================
-// Методы TimetableModel
-// ============================================================
-
 void TimetableModel::collectOccupiedResourcesForRow(int row,
                                                     const std::map<int, Lesson*> &lessonById,
                                                     std::set<int> &usedTeachers,
@@ -1122,7 +1098,7 @@ void TimetableModel::generateDoubleLessons(LessonBuckets &buckets, const std::ma
         const int pairQuota = qMin(maxDoublePerPair, (int)freeColumns.size());
         int placedInPair = 0;
 
-        // ---- Сначала двойные уроки с двумя классами
+        // Сначала двойные уроки с двумя классами
         {
             const int canPlace = pairQuota - placedInPair;
             if (canPlace > 0)
@@ -1185,7 +1161,7 @@ void TimetableModel::generateDoubleLessons(LessonBuckets &buckets, const std::ma
             }
         }
 
-        // ---- Потом двойные уроки с одним классом
+        // Потом двойные уроки с одним классом
         {
             const int canPlace = pairQuota - placedInPair;
             if (canPlace > 0)
