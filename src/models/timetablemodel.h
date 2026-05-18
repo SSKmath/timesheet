@@ -93,6 +93,7 @@ private:
 
     bool teacherCanWorkOnDay(int teacherId, int dayIndex) const;
     int dayIndexForRow(int row) const;
+    bool isLessonDouble(const QString &lessonId) const;
 
     int m_roomCount;
     int m_slotCount;

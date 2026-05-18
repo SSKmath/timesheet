@@ -385,7 +385,51 @@ bool TimetableModel::placeLesson(int row, int column,
                                  const QString &lessonId,
                                  const QString &lessonName)
 {
-    return moveLessonToCell(row, column, lessonId, lessonName);
+    if (!isValidCell(row, column))
+        return false;
+
+    if (isLessonDouble(lessonId)) {
+        // Двойной урок должен занять две строки в одном столбце
+        if (row + 1 >= m_slotCount)
+            return false;
+
+        // 1. Удалить все старые ячейки с этим уроком (если он уже был размещён)
+        for (int r = 0; r < m_slotCount; ++r) {
+            for (int c = 0; c < m_roomCount; ++c) {
+                const int idx = cellIndex(r, c);
+                if (m_cells[idx].lessonId == lessonId) {
+                    m_cells[idx].lessonId.clear();
+                    m_cells[idx].lessonName.clear();
+                    emit dataChanged(index(r, c), index(r, c), {LessonIdRole, LessonNameRole});
+                }
+            }
+        }
+
+        // 2. Проверить, что целевые ячейки (row, column) и (row+1, column) свободны
+        const int pos1 = cellIndex(row, column);
+        const int pos2 = cellIndex(row + 1, column);
+
+        if (!m_cells[pos1].lessonId.isEmpty() || !m_cells[pos2].lessonId.isEmpty())
+            return false;
+
+        // 3. Записать урок в обе ячейки
+        m_cells[pos1].lessonId = lessonId;
+        m_cells[pos1].lessonName = lessonName;
+        m_cells[pos2].lessonId = lessonId;
+        m_cells[pos2].lessonName = lessonName;
+
+        emit dataChanged(index(row, column), index(row, column), {LessonIdRole, LessonNameRole});
+        emit dataChanged(index(row + 1, column), index(row + 1, column), {LessonIdRole, LessonNameRole});
+
+        ++m_lessonUsageRevision;
+        emit lessonUsageChanged();
+        saveToStorage();
+        return true;
+    }
+    else {
+        // Одинарный урок – прежняя логика
+        return moveLessonToCell(row, column, lessonId, lessonName);
+    }
 }
 
 bool TimetableModel::setLessonAtCell(int row, int column,
@@ -406,8 +450,6 @@ bool TimetableModel::setLessonAtCell(int row, int column,
     ++m_lessonUsageRevision;
     emit lessonUsageChanged();
 
-    // Во время генерации лучше не сохранять каждый раз.
-    // Тогда generate() может ставить m_suspendAutosave = true.
     if (!m_suspendAutosave)
         saveToStorage();
 
@@ -419,21 +461,31 @@ bool TimetableModel::clearLesson(int row, int column)
     if (!isValidCell(row, column))
         return false;
 
-    const int pos = cellIndex(row, column);
-
-    if (m_cells[pos].lessonId.isEmpty() && m_cells[pos].lessonName.isEmpty())
+    const QString lessonId = m_cells[cellIndex(row, column)].lessonId;
+    if (lessonId.isEmpty())
         return true;
 
-    m_cells[pos].lessonId.clear();
-    m_cells[pos].lessonName.clear();
-
-    emit dataChanged(index(row, column), index(row, column),
-                     {LessonIdRole, LessonNameRole});
+    if (isLessonDouble(lessonId)) {
+        for (int r = 0; r < m_slotCount; ++r) {
+            for (int c = 0; c < m_roomCount; ++c) {
+                const int idx = cellIndex(r, c);
+                if (m_cells[idx].lessonId == lessonId) {
+                    m_cells[idx].lessonId.clear();
+                    m_cells[idx].lessonName.clear();
+                    emit dataChanged(index(r, c), index(r, c), {LessonIdRole, LessonNameRole});
+                }
+            }
+        }
+    } else {
+        // Одинарный урок – очистить только эту ячейку
+        m_cells[cellIndex(row, column)].lessonId.clear();
+        m_cells[cellIndex(row, column)].lessonName.clear();
+        emit dataChanged(index(row, column), index(row, column), {LessonIdRole, LessonNameRole});
+    }
 
     ++m_lessonUsageRevision;
     emit lessonUsageChanged();
     saveToStorage();
-
     return true;
 }
 
@@ -619,6 +671,16 @@ bool TimetableModel::teacherCanWorkOnDay(int teacherId, int dayIndex) const
 
     const QList<bool> days = teacher->workingDays();
     return dayIndex < days.size() && days[dayIndex];
+}
+
+bool TimetableModel::isLessonDouble(const QString &lessonId) const
+{
+    if (!m_lessonModel)
+        return false;
+    LessonModel *lessonModel = qobject_cast<LessonModel *>(m_lessonModel);
+    if (!lessonModel)
+        return false;
+    return lessonModel->isDoubleById(lessonId);
 }
 
 template <typename T>
